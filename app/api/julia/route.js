@@ -11,6 +11,7 @@ export async function POST(request) {
         
         console.log("Mensagem enviada:", message);
 
+        // Criação de chat
         const externalResponse = await fetch('https://api.zaia.app/v1.1/api/external-generative-chat/create', {
             method: 'POST',
             headers: {
@@ -25,7 +26,11 @@ export async function POST(request) {
         }
 
         const externalData = await externalResponse.json();
+        if (!externalData || !externalData.id) {
+            throw new Error("Resposta inválida ao criar chat externo.");
+        }
 
+        // Envio da mensagem
         const messageResponse = await fetch('https://api.zaia.app/v1.1/api/external-generative-message/create', {
             method: 'POST',
             headers: {
@@ -47,8 +52,12 @@ export async function POST(request) {
         }
 
         const responseData = await messageResponse.json();
-        const produtos = responseData.text || "";
-        console.log("Resposta da API externa:", produtos);
+        if (!responseData || typeof responseData !== 'object' || !responseData.text) {
+            throw new Error("Resposta inválida da API externa.");
+        }
+
+        const produtos = responseData.text;
+        console.log("Resposta da API externa:", responseData);
 
         // Extração dos IDs
         const idPattern = /Id: (\d+)/g;
@@ -63,7 +72,7 @@ export async function POST(request) {
             return new Response(JSON.stringify({ message: "Nenhum produto encontrado." }), { status: 404 });
         }
 
-        const produtosBd = await prisma.tedie_Produtos.findMany({ where: { ProdutoID: { in: ids } } });
+        const produtosBd = await prisma.TedieProduto.findMany({ where: { Id: { in: ids } } });
 
         return new Response(JSON.stringify(produtosBd), {
             status: 200,
