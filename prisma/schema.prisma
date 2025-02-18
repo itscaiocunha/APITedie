@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlserver"
-  url      = "sqlserver://tedie.database.windows.net:1433;database=tedie_app;user=tedie;password=Sqlte@20te;encrypt=true;trustServerCertificate=false;multipleActiveResultSets=false;connectionTimeout=30"
+  url      = env("DATABASE_URL")
 }
 
 model TedieCategoria {
@@ -42,3 +42,11 @@ model TedieProduto {
   IdEmpresa    Int?
 }
 
+model TedieUser {
+  id       Int     @id(map: "PK__tmp_ms_x__3213E83FA80DAA1C") @default(autoincrement())
+  name     String  @db.NVarChar(255)
+  cpf      String? @db.NVarChar(20)
+  telefone String? @db.NVarChar(15)
+  email    String? @unique(map: "UQ__tmp_ms_x__AB6E616413506AD1") @db.NVarChar(255)
+  senha    String? @db.NVarChar(255)
+}

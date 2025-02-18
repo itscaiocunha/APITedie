@@ -1,3 +1,7 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
 export async function POST(request) {
     const start = Date.now(); // Marca o início da execução
 
@@ -46,10 +50,18 @@ export async function POST(request) {
         // Extração dos IDs otimizada
         const ids = (produtos.match(/Id: (\d+)/g) || []).map(match => parseInt(match.split(": ")[1], 10));
 
-        // Tempo de execução
+        if (!ids || ids.length === 0) {
+            return new Response(JSON.stringify({ message: "Nenhum ID de produto encontrado." }), { status: 404 });
+        }
+
+        // Consulta ao banco de dados
+        const produtosBd = await prisma.TedieProduto.findMany({
+            where: { Id: { in: ids } }
+        });
+
         const executionTime = Date.now() - start;
 
-        return new Response(JSON.stringify({ ids, executionTime }), {
+        return new Response(JSON.stringify({ produtos: produtosBd, executionTime }), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
@@ -59,7 +71,7 @@ export async function POST(request) {
 
     } catch (error) {
         const executionTime = Date.now() - start;
-        console.error(`Erro na função JulIA: ${error.message}`);
+        console.error(`Erro na função: ${error.message}`);
 
         return new Response(JSON.stringify({ error: error.message, executionTime }), { status: 500 });
     }
