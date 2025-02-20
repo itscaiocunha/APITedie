@@ -6,7 +6,7 @@ import cors from 'cors';
 
 // Configuração do CORS
 const corsOptions = {
-  origin: 'https://tedie.vercel.app/',
+  origin: 'https://tedie.vercel.app/login',
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
