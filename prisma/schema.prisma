@@ -7,46 +7,95 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model TedieCategoria {
-  Id           Int       @id(map: "PK_TedieCategoria") @default(autoincrement())
-  Nome         String?   @db.NVarChar(225)
-  Status       String?   @db.Char(2)
-  DataCadastro DateTime? @db.Date
+model carrinho {
+  id          Int       @id(map: "PK__carrinho__3213E83F20D25900") @default(autoincrement())
+  usuario_id  Int?
+  produto_id  Int?
+  quantidade  Int       @default(1, map: "DF__carrinho__quanti__32AB8735")
+  data_adicao DateTime? @default(now(), map: "DF__carrinho__data_a__339FAB6E") @db.DateTime
+  produtos    produtos? @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__produt__3587F3E0")
+  usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__usuari__3493CFA7")
 }
 
-model TedieEmpresa {
-  Id           Int       @id(map: "PK_TedieEmpresa") @default(autoincrement())
-  RazaoSocial  String?   @db.NVarChar(225)
-  CNPJ         String?   @db.NVarChar(50)
-  NomeFantasia String?   @db.NVarChar(225)
-  Email        String?   @db.NVarChar(225)
-  DataCadastro DateTime? @db.Date
-  Status       String?   @db.Char(2)
-  User         String?   @db.NVarChar(225)
-  Senha        String?   @db.Text
+model categorias {
+  id        Int        @id(map: "PK__categori__3213E83FB579C768") @default(autoincrement())
+  nome      String     @db.NVarChar(100)
+  descricao String?    @db.NVarChar(Max)
+  produtos  produtos[]
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model TedieProduto {
-  Id           Int       @id(map: "PK_TedieProduto") @default(autoincrement())
-  Nome         String?   @db.NVarChar(Max)
-  Descricao    String?   @db.NVarChar(Max)
-  Imagem       String?   @db.NVarChar(Max)
-  CodBarras    String?   @db.NVarChar(100)
-  Status       String?   @db.NVarChar(50)
-  DataCadastro DateTime? @db.DateTime
-  Destaque     String?   @db.NVarChar(50)
-  Estoque      Int?
-  Preco        Float?
-  IdCategoria  Int?
-  IdEmpresa    Int?
+model cupons {
+  id          Int       @id(map: "PK_cupons") @default(autoincrement())
+  codigo      String?   @db.NVarChar(50)
+  desconto    String?   @db.NVarChar(50)
+  validade    DateTime? @db.DateTime
+  data_adicao DateTime? @db.DateTime
 }
 
-model TedieUser {
-  id       Int     @id(map: "PK__tmp_ms_x__3213E83FA80DAA1C") @default(autoincrement())
-  name     String  @db.NVarChar(255)
-  cpf      String? @db.NVarChar(20)
-  telefone String? @db.NVarChar(15)
-  email    String? @unique(map: "UQ__tmp_ms_x__AB6E616413506AD1") @db.NVarChar(255)
-  senha    String? @db.NVarChar(255)
+model envios {
+  id           Int       @id(map: "PK__envios__3213E83F0944207A") @default(autoincrement())
+  pedido_id    Int?
+  rastreio     String?   @unique(map: "UQ__envios__96D575193117401C") @db.NVarChar(50)
+  status       String?   @default("preparando", map: "DF__envios__status__498EEC8D") @db.VarChar(15)
+  data_envio   DateTime? @db.DateTime
+  data_entrega DateTime? @db.DateTime
+  pedidos      pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__envios__pedido_i__4A8310C6")
+}
+
+model itens_pedido {
+  id         Int       @id(map: "PK__itens_pe__3213E83F6FE3D8B7") @default(autoincrement())
+  pedido_id  Int?
+  produto_id Int?
+  quantidade Int
+  preco_unit Decimal   @db.Decimal(10, 2)
+  pedidos    pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__pedid__3E1D39E1")
+  produtos   produtos? @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__produ__3F115E1A")
+}
+
+model pagamentos {
+  id             Int       @id(map: "PK__pagament__3213E83F4C4BBFD4") @default(autoincrement())
+  pedido_id      Int?
+  metodo         String    @db.VarChar(10)
+  status         String?   @default("pendente", map: "DF__pagamento__statu__43D61337") @db.VarChar(10)
+  data_pagamento DateTime? @db.DateTime
+  pedidos        pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pagamento__pedid__44CA3770")
+}
+
+model pedidos {
+  id           Int            @id(map: "PK__pedidos__3213E83FFF94F323") @default(autoincrement())
+  usuario_id   Int?
+  total        Decimal        @db.Decimal(10, 2)
+  status       String?        @default("pendente", map: "DF__pedidos__status__395884C4") @db.VarChar(10)
+  data_pedido  DateTime?      @default(now(), map: "DF__pedidos__data_pe__3A4CA8FD") @db.DateTime
+  envios       envios[]
+  itens_pedido itens_pedido[]
+  pagamentos   pagamentos[]
+  usuarios     usuarios?      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pedidos__usuario__3B40CD36")
+}
+
+model produtos {
+  id           Int            @id(map: "PK__produtos__3213E83F2880AB8B") @default(autoincrement())
+  nome         String         @db.NVarChar(100)
+  descricao    String?        @db.NVarChar(Max)
+  preco        Decimal        @db.Decimal(10, 2)
+  estoque      Int?           @default(0, map: "DF__produtos__estoqu__2EDAF651")
+  categoria_id Int?
+  imagem       String?        @db.NVarChar(255)
+  carrinho     carrinho[]
+  itens_pedido itens_pedido[]
+  categorias   categorias?    @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__produtos__catego__2FCF1A8A")
+}
+
+model usuarios {
+  id           Int        @id(map: "PK__tmp_ms_x__3213E83FCF944EB2") @default(autoincrement())
+  nome         String     @db.NVarChar(100)
+  cpf          String?    @db.NVarChar(15)
+  email        String     @unique(map: "UQ__tmp_ms_x__AB6E61644C9E928F") @db.NVarChar(100)
+  senha        String     @db.NVarChar(255)
+  telefone     String?    @db.NVarChar(20)
+  endereco     String?    @db.NVarChar(Max)
+  tipo_usuario String?    @default("cliente", map: "DF__tmp_ms_xx__tipo___503BEA1C") @db.VarChar(10)
+  data_criacao DateTime?  @default(now(), map: "DF__tmp_ms_xx__data___51300E55") @db.DateTime
+  carrinho     carrinho[]
+  pedidos      pedidos[]
 }
