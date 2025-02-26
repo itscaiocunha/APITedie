@@ -10,7 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^6.2.1",
+    "@prisma/client": "^6.4.1",
     "bcryptjs": "^3.0.1",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",

@@ -55,7 +55,7 @@ export async function POST(request) {
         }
 
         // Consulta ao banco de dados
-        const produtosBd = await prisma.TedieProduto.findMany({
+        const produtosBd = await prisma.produtos.findMany({
             where: { Id: { in: ids } }
         });
 
