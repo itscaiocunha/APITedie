@@ -4,6 +4,12 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const headers = {
+  "Access-Control-Allow-Origin": "*",  // Permite qualquer origem
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",  // Métodos permitidos
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",  // Cabeçalhos permitidos
+};
+
 // Registro de usuário
 export async function POST(req) {
   try {
