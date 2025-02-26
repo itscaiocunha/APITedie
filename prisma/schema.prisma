@@ -13,15 +13,13 @@ model carrinho {
   produto_id  Int?
   quantidade  Int       @default(1, map: "DF__carrinho__quanti__32AB8735")
   data_adicao DateTime? @default(now(), map: "DF__carrinho__data_a__339FAB6E") @db.DateTime
-  produtos    produtos? @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__produt__3587F3E0")
   usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__usuari__3493CFA7")
 }
 
 model categorias {
-  id        Int        @id(map: "PK__categori__3213E83FB579C768") @default(autoincrement())
-  nome      String     @db.NVarChar(100)
-  descricao String?    @db.NVarChar(Max)
-  produtos  produtos[]
+  id        Int     @id(map: "PK__categori__3213E83FB579C768") @default(autoincrement())
+  nome      String  @db.NVarChar(100)
+  descricao String? @db.NVarChar(Max)
 }
 
 model cupons {
@@ -43,13 +41,12 @@ model envios {
 }
 
 model itens_pedido {
-  id         Int       @id(map: "PK__itens_pe__3213E83F6FE3D8B7") @default(autoincrement())
+  id         Int      @id(map: "PK__itens_pe__3213E83F6FE3D8B7") @default(autoincrement())
   pedido_id  Int?
   produto_id Int?
   quantidade Int
-  preco_unit Decimal   @db.Decimal(10, 2)
-  pedidos    pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__pedid__3E1D39E1")
-  produtos   produtos? @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__produ__3F115E1A")
+  preco_unit Decimal  @db.Decimal(10, 2)
+  pedidos    pedidos? @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__pedid__3E1D39E1")
 }
 
 model pagamentos {
@@ -74,16 +71,16 @@ model pedidos {
 }
 
 model produtos {
-  id           Int            @id(map: "PK__produtos__3213E83F2880AB8B") @default(autoincrement())
-  nome         String         @db.NVarChar(100)
-  descricao    String?        @db.NVarChar(Max)
-  preco        Decimal        @db.Decimal(10, 2)
-  estoque      Int?           @default(0, map: "DF__produtos__estoqu__2EDAF651")
-  categoria_id Int?
-  imagem       String?        @db.NVarChar(255)
-  carrinho     carrinho[]
-  itens_pedido itens_pedido[]
-  categorias   categorias?    @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__produtos__catego__2FCF1A8A")
+  id           Int       @id(map: "PK__produtos__3213E83F9F8F0D5D") @default(autoincrement())
+  nome         String    @db.NVarChar(100)
+  descricao    String?   @db.NVarChar(Max)
+  preco        Decimal   @db.Decimal(10, 2)
+  estoque      Int?      @default(0, map: "DF__produtos__estoqu__56E8E7AB")
+  categoria_id String?   @db.NVarChar(50)
+  imagem       String?   @db.NVarChar(255)
+  ean          String?   @db.NVarChar(100)
+  empresa_id   Int?
+  data_criacao DateTime? @db.DateTime
 }
 
 model usuarios {
