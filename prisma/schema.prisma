@@ -96,3 +96,15 @@ model usuarios {
   carrinho     carrinho[]
   pedidos      pedidos[]
 }
+
+model enderecos {
+  Id          Int     @id(map: "PK__endereco__3214EC07AE7146A0") @default(autoincrement())
+  Logradouro  String  @db.NVarChar(255)
+  Numero      String  @db.NVarChar(10)
+  Complemento String? @db.NVarChar(255)
+  Bairro      String  @db.NVarChar(100)
+  Cidade      String  @db.NVarChar(100)
+  Estado      String  @db.Char(2)
+  CEP         String  @db.Char(9)
+  Pais        String  @default("Brasil", map: "DF__enderecos__Pais__625A9A57") @db.NVarChar(50)
+}
