@@ -2,22 +2,32 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function POST(request) {
-    const start = Date.now(); // Marca o início da execução
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
+const API_URL = 'https://api.zaia.app/v1.1/api';
+const API_TOKEN = process.env.ZAIA_API_TOKEN; // Recomendado armazenar o token em variáveis de ambiente
+const AGENT_ID = 27177;
+
+export async function POST(request) {
+    const start = Date.now();
     try {
-        const agentId = 27177;
         const { message: userMessage } = await request.json();
+        if (!userMessage) throw new Error("Mensagem do usuário é obrigatória.");
+
         const message = `Listar o máximo possível de produtos que estão no treinamento de arquivos que se enquadram na seguinte mensagem: ${userMessage}`;
 
-        // Criar o chat externo
-        const externalResponse = await fetch('https://api.zaia.app/v1.1/api/external-generative-chat/create', {
+        // Criar chat externo
+        const externalResponse = await fetch(`${API_URL}/external-generative-chat/create`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer 7ca346d9-0834-4559-b9ec-6eb8888320bd`
+                'Authorization': `Bearer ${API_TOKEN}`
             },
-            body: JSON.stringify({ agentId })
+            body: JSON.stringify({ agentId: AGENT_ID })
         });
 
         if (!externalResponse.ok) throw new Error(`Erro ao criar chat externo: ${externalResponse.statusText}`);
@@ -25,16 +35,15 @@ export async function POST(request) {
         const { id: chatId } = await externalResponse.json();
         if (!chatId) throw new Error("Resposta inválida ao criar chat externo.");
 
-        // Enviar a mensagem
-        const messageResponse = await fetch('https://api.zaia.app/v1.1/api/external-generative-message/create', {
+        // Enviar mensagem
+        const messageResponse = await fetch(`${API_URL}/external-generative-message/create`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer 7ca346d9-0834-4559-b9ec-6eb8888320bd`
+                'Authorization': `Bearer ${API_TOKEN}`
             },
             body: JSON.stringify({
-                agentId,
+                agentId: AGENT_ID,
                 externalGenerativeChatId: chatId,
                 prompt: message,
                 streaming: false,
@@ -47,32 +56,30 @@ export async function POST(request) {
         const { text: produtos } = await messageResponse.json();
         if (!produtos) throw new Error("Resposta inválida da API externa.");
 
-        // Extração dos IDs otimizada
-        const ids = (produtos.match(/Id: (\d+)/g) || []).map(match => parseInt(match.split(": ")[1], 10));
+        // Extração de IDs usando regex
+        const ids = [...produtos.matchAll(/Id:\s*(\d+)/g)].map(match => parseInt(match[1], 10));
 
-        if (!ids || ids.length === 0) {
-            return new Response(JSON.stringify({ message: "Nenhum ID de produto encontrado." }), { status: 404 });
+        if (!ids.length) {
+            return new Response(JSON.stringify({ message: "Nenhum ID de produto encontrado." }), { status: 404, headers: corsHeaders });
         }
 
         // Consulta ao banco de dados
         const produtosBd = await prisma.produtos.findMany({
-            where: { Id: { in: ids } }
+            where: { id: { in: ids } }
         });
 
         const executionTime = Date.now() - start;
 
         return new Response(JSON.stringify({ produtos: produtosBd, executionTime }), {
             status: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            }
+            headers: corsHeaders
         });
 
     } catch (error) {
-        const executionTime = Date.now() - start;
         console.error(`Erro na função: ${error.message}`);
-
-        return new Response(JSON.stringify({ error: error.message, executionTime }), { status: 500 });
+        return new Response(JSON.stringify({ error: error.message, executionTime: Date.now() - start }), {
+            status: 500,
+            headers: corsHeaders
+        });
     }
 }
