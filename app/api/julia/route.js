@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",  // Permite qualquer origem (ajuste conforme necessário)
+  "Access-Control-Allow-Origin": "https://tedie.vercel.app",  // Permite qualquer origem (ajuste conforme necessário)
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
