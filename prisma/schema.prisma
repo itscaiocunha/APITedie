@@ -70,17 +70,20 @@ model pedidos {
   usuarios     usuarios?      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pedidos__usuario__3B40CD36")
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model produtos {
-  id           Int       @id(map: "PK__produtos__3213E83F9F8F0D5D") @default(autoincrement())
-  nome         String    @db.NVarChar(100)
+  id           Int
+  nome         String?   @db.NVarChar(100)
   descricao    String?   @db.NVarChar(Max)
-  preco        Decimal   @db.Decimal(10, 2)
-  estoque      Int?      @default(0, map: "DF__produtos__estoqu__56E8E7AB")
-  categoria_id String?   @db.NVarChar(50)
-  imagem       String?   @db.NVarChar(255)
-  ean          String?   @db.NVarChar(100)
-  empresa_id   Int?
-  data_criacao DateTime? @db.DateTime
+  preco        Float?
+  Estoque      Int?
+  categoria_id Int?
+  imagem       String?   @db.NVarChar(Max)
+  ean          String?   @db.NVarChar(Max)
+  IdEmpresa    Int?
+  DataCadastro DateTime? @db.DateTime
+
+  @@ignore
 }
 
 model usuarios {
