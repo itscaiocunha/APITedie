@@ -25,7 +25,7 @@ export async function POST(req) {
     }
 
     // Buscar usuário no banco de dados
-    const user = await prisma.TedieUser.findUnique({ where: { email } });
+    const user = await prisma.usuarios.findUnique({ where: { email } });
     if (!user) {
       return new Response(
         JSON.stringify({ message: "Usuário não encontrado" }),
