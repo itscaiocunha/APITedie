@@ -51,10 +51,11 @@ export async function POST(req) {
       JSON.stringify({
         status: "success",
         message: "Login realizado com sucesso",
-        data: { id: user.id, token },
+        data: { id: user.id, token, name: user.nome }, // <-- Usando "nome" corretamente
       }),
       { status: 200, headers }
     );
+
   } catch (error) {
     console.error("Erro no servidor:", error);
     return new Response(
