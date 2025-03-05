@@ -50,7 +50,20 @@ export async function POST(req) {
       );
     }
 
-    const data = await response.json();
+    const text = await response.text(); // Obtém a resposta como texto
+    console.log("Resposta do Mercado Pago:", text); // Debug
+
+    let data;
+    try {
+      data = JSON.parse(text); // Tenta converter para JSON
+    } catch (error) {
+      console.error("Erro ao converter resposta para JSON:", error);
+      return NextResponse.json(
+        { error: "Erro ao processar resposta do Mercado Pago" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Erro ao gerar PIX:", error);
