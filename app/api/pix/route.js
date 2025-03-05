@@ -1,26 +1,62 @@
+import { NextResponse } from "next/server";
+
+const MERCADO_PAGO_TOKEN = process.env.MP_ACCESS_TOKEN; // Use variáveis de ambiente
+
 export async function POST(req) {
   try {
     const body = await req.json();
+
+    if (!MERCADO_PAGO_TOKEN) {
+      console.error("Erro: Token do Mercado Pago não configurado.");
+      return NextResponse.json(
+        { error: "Erro interno: Token não configurado" },
+        { status: 500 }
+      );
+    }
+
+    if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
+      return NextResponse.json(
+        { error: "Valor da transação (amount) inválido" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.email || typeof body.email !== "string" || !body.email.includes("@")) {
+      return NextResponse.json(
+        { error: "E-mail do pagador inválido" },
+        { status: 400 }
+      );
+    }
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+        "Authorization": `Bearer ${MERCADO_PAGO_TOKEN}`,
         "X-Idempotency-Key": `${Date.now()}`
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        transaction_amount: parseFloat(body.amount),
+        payment_method_id: "pix",
+        payer: { email: body.email },
+      }),
     });
 
+    if (!response.ok) {
+      console.error("Erro do Mercado Pago:", await response.text());
+      return NextResponse.json(
+        { error: "Erro ao processar pagamento com o Mercado Pago" },
+        { status: response.status }
+      );
+    }
+
     const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: { "Content-Type": "application/json" }
-    });
+    return NextResponse.json(data);
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Erro ao gerar PIX" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    console.error("Erro ao gerar PIX:", error);
+    return NextResponse.json(
+      { error: "Erro inesperado ao processar pagamento" },
+      { status: 500 }
+    );
   }
 }
