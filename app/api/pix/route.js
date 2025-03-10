@@ -21,7 +21,11 @@ export async function POST(req) {
       );
     }
 
-    if (!body.email || typeof body.email !== "string" || !body.email.includes("@")) {
+    if (
+      !body.email ||
+      typeof body.email !== "string" ||
+      !body.email.includes("@")
+    ) {
       return NextResponse.json(
         { error: "E-mail do pagador inválido" },
         { status: 400 }
@@ -32,8 +36,8 @@ export async function POST(req) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${MERCADO_PAGO_TOKEN}`,
-        "X-Idempotency-Key": `${Date.now()}`
+        Authorization: `Bearer ${MERCADO_PAGO_TOKEN}`,
+        "X-Idempotency-Key": `${Date.now()}`,
       },
       body: JSON.stringify({
         transaction_amount: parseFloat(body.amount),
@@ -75,8 +79,10 @@ export async function POST(req) {
 }
 
 export async function GET(req) {
+  console.log("Verificando status do pagamento...");
   try {
-    const body = await req.json();
+    const { searchParams } = new URL(req.url);
+    const idPagamento = searchParams.get("id");
 
     if (!MERCADO_PAGO_TOKEN) {
       console.error("Erro: Token do Mercado Pago não configurado.");
@@ -86,23 +92,20 @@ export async function GET(req) {
       );
     }
 
-    if (!body.id || isNaN(body.id) || body.id < 0) {
-      return NextResponse.json(
-        { error: "ID inválido" },
-        { status: 400 }
-      );
+    if (!idPagamento || isNaN(idPagamento) || idPagamento < 0) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    const idPagamento = Number(body.id);
-
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${idPagamento}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${MERCADO_PAGO_TOKEN}`,
-        "X-Idempotency-Key": `${Date.now()}`
-      },
-    });
+    const response = await fetch(
+      `https://api.mercadopago.com/v1/payments/${idPagamento}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${MERCADO_PAGO_TOKEN}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       console.error("Erro do Mercado Pago:", await response.text());
@@ -113,7 +116,6 @@ export async function GET(req) {
     }
 
     const text = await response.text(); // Obtém a resposta como texto
-    console.log("Resposta do Mercado Pago:", text); // Debug
 
     let data;
     try {
@@ -126,7 +128,10 @@ export async function GET(req) {
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      status_pagamento: data.status,
+      status_detail: data.status_detail,
+    });
   } catch (error) {
     console.error("Erro no status:", error);
     return NextResponse.json(
