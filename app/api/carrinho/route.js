@@ -8,10 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders });
-}
-
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const usuario_id = searchParams.get("usuario_id");
@@ -24,10 +20,18 @@ export async function GET(request) {
   }
 
   try {
+    // Consulta com SELECT explícito
     const itensCarrinho = await prisma.carrinho.findMany({
       where: { usuario_id: parseInt(usuario_id) },
-      include: {
-        usuarios: true, // Inclui informações do usuário
+      select: {
+        id: true,
+        usuario_id: true,
+        produto_id: true,
+        quantidade: true,
+        data_adicao: true,
+      },
+      orderBy: {
+        data_adicao: "desc",
       },
     });
 
@@ -57,26 +61,31 @@ export async function POST(request) {
       });
     }
 
-    const carrinhoItems = await Promise.all(itens.map(async ({ produto_id, quantidade }) => {
-      if (!produto_id || !quantidade) {
-        return new Response(JSON.stringify({ error: "Todos os campos são obrigatórios." }), {
-          status: 400,
-          headers: corsHeaders,
-        });
-      }
-      return prisma.carrinho.create({
-        data: {
-          usuario_id,
-          produto_id,
-          quantidade,
-        },
-      });
-    }));
-
-    return new Response(JSON.stringify({ message: "Itens adicionados ao carrinho.", carrinho: carrinhoItems }), {
-      status: 201,
-      headers: corsHeaders,
+    // Apaga os itens existentes do carrinho do usuário para evitar duplicidade
+    await prisma.carrinho.deleteMany({
+      where: { usuario_id: parseInt(usuario_id) },
     });
+
+    // Cria um único registro no carrinho com os itens agrupados
+    const carrinho = await prisma.carrinho.create({
+      data: {
+        usuario_id: parseInt(usuario_id),
+        itens: {
+          create: itens.map(({ produto_id, quantidade }) => ({
+            produto_id,
+            quantidade,
+          })),
+        },
+      },
+    });
+
+    return new Response(
+      JSON.stringify({ message: "Itens adicionados ao carrinho.", carrinho }),
+      {
+        status: 201,
+        headers: corsHeaders,
+      }
+    );
   } catch (error) {
     console.error("Erro ao processar requisição:", error);
     return new Response(JSON.stringify({ error: error.message }), {
