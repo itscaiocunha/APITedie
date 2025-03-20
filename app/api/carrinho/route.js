@@ -61,31 +61,26 @@ export async function POST(request) {
       });
     }
 
-    // Apaga os itens existentes do carrinho do usuário para evitar duplicidade
-    await prisma.carrinho.deleteMany({
-      where: { usuario_id: parseInt(usuario_id) },
-    });
-
-    // Cria um único registro no carrinho com os itens agrupados
-    const carrinho = await prisma.carrinho.create({
-      data: {
-        usuario_id: parseInt(usuario_id),
-        itens: {
-          create: itens.map(({ produto_id, quantidade }) => ({
-            produto_id,
-            quantidade,
-          })),
-        },
-      },
-    });
-
-    return new Response(
-      JSON.stringify({ message: "Itens adicionados ao carrinho.", carrinho }),
-      {
-        status: 201,
-        headers: corsHeaders,
+    const carrinhoItems = await Promise.all(itens.map(async ({ produto_id, quantidade }) => {
+      if (!produto_id || !quantidade) {
+        return new Response(JSON.stringify({ error: "Todos os campos são obrigatórios." }), {
+          status: 400,
+          headers: corsHeaders,
+        });
       }
-    );
+      return prisma.carrinho.create({
+        data: {
+          usuario_id,
+          produto_id,
+          quantidade,
+        },
+      });
+    }));
+
+    return new Response(JSON.stringify({ message: "Itens adicionados ao carrinho.", carrinho: carrinhoItems }), {
+      status: 201,
+      headers: corsHeaders,
+    });
   } catch (error) {
     console.error("Erro ao processar requisição:", error);
     return new Response(JSON.stringify({ error: error.message }), {
