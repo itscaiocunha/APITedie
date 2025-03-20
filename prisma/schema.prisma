@@ -80,7 +80,6 @@ model produtos {
   imagem       String?   @db.NVarChar(Max)
   ean          String?   @db.NVarChar(Max)
   IdEmpresa    Int?
-  DataCadastro DateTime? @db.DateTime
 }
 
 model usuarios {
