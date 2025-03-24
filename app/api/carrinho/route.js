@@ -28,6 +28,8 @@ export async function GET(request) {
         usuario_id: true,
         produto_id: true,
         quantidade: true,
+        preco: true,
+        imagem: true,
         data_adicao: true,
       },
       orderBy: {
@@ -61,8 +63,8 @@ export async function POST(request) {
       });
     }
 
-    const carrinhoItems = await Promise.all(itens.map(async ({ produto_id, quantidade }) => {
-      if (!produto_id || !quantidade) {
+    const carrinhoItems = await Promise.all(itens.map(async ({ produto_id, quantidade, preco, imagem }) => {
+      if (!produto_id || !quantidade || preco === undefined || !imagem) {
         return new Response(JSON.stringify({ error: "Todos os campos são obrigatórios." }), {
           status: 400,
           headers: corsHeaders,
@@ -73,6 +75,8 @@ export async function POST(request) {
           usuario_id,
           produto_id,
           quantidade,
+          preco,
+          imagem,
         },
       });
     }));

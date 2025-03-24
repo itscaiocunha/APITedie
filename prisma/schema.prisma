@@ -12,6 +12,8 @@ model carrinho {
   usuario_id  Int?
   produto_id  Int?
   quantidade  Int       @default(1, map: "DF__carrinho__quanti__32AB8735")
+  preco       Float
+  imagem      String
   data_adicao DateTime? @default(now(), map: "DF__carrinho__data_a__339FAB6E") @db.DateTime
   usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__usuari__3493CFA7")
 }
