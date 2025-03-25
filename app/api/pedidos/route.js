@@ -8,30 +8,100 @@ const headers = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export async function GET(req) {
+export async function GET(request) {
   try {
-    // ID do usuário deve ser passado como parâmetro na URL (exemplo: /api/pedidos?id=1)
-    const url = new URL(req.url);
-    const userId = parseInt(url.searchParams.get("id"), 10);
+    // Validate request
+    const { searchParams } = new URL(request.url);
+    const userId = Number(searchParams.get("id"));
 
-    if (!userId) {
-      return new Response(JSON.stringify({ message: "ID do usuário não fornecido" }), { status: 400, headers });
+    if (!userId || isNaN(userId)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          message: "ID de usuário inválido ou não fornecido" 
+        }),
+        { status: 400, headers }
+      );
     }
 
-    const pedidos = await prisma.pedidos.findMany({
+    // Fetch orders with related data
+    const orders = await prisma.pedidos.findMany({
       where: { usuario_id: userId },
+      include: {
+        itens_pedido: {
+          include: {
+            produtos: {
+              select: {
+                id: true,
+                nome: true,
+                preco: true  // Assuming there's a price field
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        data_pedido: 'desc'  // Most recent orders first
+      }
     });
 
-    if (!pedidos.length) {
-      return new Response(JSON.stringify({ message: "Nenhum pedido encontrado" }), { status: 404, headers });
+    // Format response data
+    const formattedOrders = orders.map(order => ({
+      id: order.id,
+      usuario_id: order.usuario_id,
+      total: order.total,
+      status: order.status,
+      data_pedido: order.data_pedido,
+      itens: order.itens_pedido.map(item => ({
+        id: item.id,
+        produto_id: item.produto_id,
+        quantidade: item.quantidade,
+        preco_unit: item.preco_unit,
+        produto: {
+          id: item.produtos.id,
+          nome: item.produtos.nome,
+          preco: item.produtos.preco
+        }
+      }))
+    }));
+
+    if (formattedOrders.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: "Nenhum pedido encontrado",
+          data: []
+        }),
+        { status: 200, headers }
+      );
     }
 
-    return new Response(JSON.stringify({ status: "success", pedidos }), { status: 200, headers });
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        data: formattedOrders 
+      }),
+      { status: 200, headers }
+    );
+
   } catch (error) {
-    return new Response(JSON.stringify({ message: "Erro ao buscar pedidos" }), { status: 500, headers });
+    console.error("Database error:", error);
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        message: "Erro no servidor",
+        error: process.env.NODE_ENV === "development" ? error.message : null
+      }),
+      { status: 500, headers }
+    );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function OPTIONS() {
-  return new Response(null, { status: 204, headers });
+  return new Response(null, { 
+    status: 204, 
+    headers 
+  });
 }

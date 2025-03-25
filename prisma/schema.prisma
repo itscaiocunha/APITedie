@@ -8,13 +8,13 @@ datasource db {
 }
 
 model carrinho {
-  id          Int       @id(map: "PK__carrinho__3213E83F20D25900") @default(autoincrement())
+  id          Int       @id(map: "PK__tmp_ms_x__3213E83F3A0C2D68") @default(autoincrement())
   usuario_id  Int?
   produto_id  Int?
-  quantidade  Int       @default(1, map: "DF__carrinho__quanti__32AB8735")
-  preco       Float
-  imagem      String
-  data_adicao DateTime? @default(now(), map: "DF__carrinho__data_a__339FAB6E") @db.DateTime
+  quantidade  Int       @default(1, map: "DF__tmp_ms_xx__quant__0E391C95")
+  preco       Float?
+  imagem      String?   @db.NVarChar(Max)
+  data_adicao DateTime? @default(now(), map: "DF__tmp_ms_xx__data___0F2D40CE") @db.DateTime
   usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__usuari__3493CFA7")
 }
 
@@ -43,12 +43,13 @@ model envios {
 }
 
 model itens_pedido {
-  id         Int      @id(map: "PK__itens_pe__3213E83F6FE3D8B7") @default(autoincrement())
+  id         Int       @id(map: "PK__itens_pe__3213E83F6FE3D8B7") @default(autoincrement())
   pedido_id  Int?
   produto_id Int?
   quantidade Int
-  preco_unit Decimal  @db.Decimal(10, 2)
-  pedidos    pedidos? @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__pedid__3E1D39E1")
+  preco_unit Decimal   @db.Decimal(10, 2)
+  pedidos    pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__itens_ped__pedid__3E1D39E1")
+  produtos   produtos? @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_itens_pedido_produtos")
 }
 
 model pagamentos {
@@ -73,15 +74,16 @@ model pedidos {
 }
 
 model produtos {
-  id           Int       @id @default(autoincrement())
-  nome         String?   @db.NVarChar(100)
-  descricao    String?   @db.NVarChar(Max)
+  id           Int            @id(map: "PK_produtos")
+  nome         String?        @db.NVarChar(100)
+  descricao    String?        @db.NVarChar(Max)
   preco        Float?
   Estoque      Int?
   categoria_id Int?
-  imagem       String?   @db.NVarChar(Max)
-  ean          String?   @db.NVarChar(Max)
+  imagem       String?        @db.NVarChar(100)
+  ean          String?        @db.NVarChar(Max)
   IdEmpresa    Int?
+  itens_pedido itens_pedido[]
 }
 
 model usuarios {
