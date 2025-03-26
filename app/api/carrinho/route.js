@@ -1,9 +1,10 @@
+import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // Ajuste conforme necessário
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -13,36 +14,49 @@ export async function GET(request) {
   const usuario_id = searchParams.get("usuario_id");
 
   if (!usuario_id) {
-    return new Response(JSON.stringify({ error: "ID do usuário é obrigatório." }), {
+    return new NextResponse(JSON.stringify({ 
+      success: false,
+      error: "ID do usuário é obrigatório." 
+    }), {
       status: 400,
       headers: corsHeaders,
     });
   }
 
   try {
-    // Consulta com SELECT explícito
     const itensCarrinho = await prisma.carrinho.findMany({
       where: { usuario_id: parseInt(usuario_id) },
       select: {
         id: true,
         usuario_id: true,
         produto_id: true,
+        nome: true, 
         quantidade: true,
         preco: true,
         imagem: true,
         data_adicao: true,
       },
       orderBy: {
-        data_adicao: "desc",
-      },
+        data_adicao: 'desc'
+      }
     });
 
-    return new Response(JSON.stringify({ carrinho: itensCarrinho }), {
+    return new NextResponse(JSON.stringify({
+      success: true,
+      itens: itensCarrinho,
+      total_itens: itensCarrinho.length,
+      item_mais_recente: itensCarrinho[0]?.data_adicao || null
+    }), { 
       status: 200,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
+    
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new NextResponse(JSON.stringify({ 
+      success: false,
+      error: "Erro ao consultar carrinho",
+      details: error.message 
+    }), {
       status: 500,
       headers: corsHeaders,
     });
@@ -52,44 +66,66 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    console.log("Dados recebidos:", body);
-
     const { usuario_id, itens } = body;
 
-    if (!usuario_id || !itens || !Array.isArray(itens) || itens.length === 0) {
-      return new Response(JSON.stringify({ error: "Usuário e itens são obrigatórios." }), {
+    if (!usuario_id || !itens || !Array.isArray(itens)) {
+      return new NextResponse(JSON.stringify({
+        success: false,
+        error: "Dados inválidos - usuário e itens são obrigatórios"
+      }), {
         status: 400,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
     }
 
-    const carrinhoItems = await Promise.all(itens.map(async ({ produto_id, quantidade, preco, imagem }) => {
-      if (!produto_id || !quantidade || preco === undefined || !imagem) {
-        return new Response(JSON.stringify({ error: "Todos os campos são obrigatórios." }), {
-          status: 400,
-          headers: corsHeaders,
-        });
-      }
-      return prisma.carrinho.create({
-        data: {
-          usuario_id,
-          produto_id,
-          quantidade,
-          preco,
-          imagem,
-        },
-      });
-    }));
+    const result = await prisma.$transaction(
+      itens.map(item => 
+        prisma.carrinho.create({
+          data: {
+            usuario_id,
+            produto_id: item.produto_id,
+            nome: item.nome,
+            quantidade: item.quantidade,
+            preco: item.preco,
+            imagem: item.imagem,
+          },
+          select: {
+            id: true,
+            nome: true,
+            quantidade: true,
+            preco: true,
+            data_adicao: true
+          }
+        })
+      )
+    );
 
-    return new Response(JSON.stringify({ message: "Itens adicionados ao carrinho.", carrinho: carrinhoItems }), {
+    return new NextResponse(JSON.stringify({
+      success: true,
+      itens: result,
+      metadata: {
+        primeiro_item_adicionado_em: result[0]?.data_adicao || null
+      }
+    }), { 
       status: 201,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
+
   } catch (error) {
-    console.error("Erro ao processar requisição:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Erro:", error);
+    return new NextResponse(JSON.stringify({ 
+      success: false,
+      error: "Erro ao adicionar itens",
+      details: error.message 
+    }), {
       status: 500,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    headers: corsHeaders,
+  });
 }

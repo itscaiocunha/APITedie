@@ -8,13 +8,14 @@ datasource db {
 }
 
 model carrinho {
-  id          Int       @id(map: "PK__tmp_ms_x__3213E83F3A0C2D68") @default(autoincrement())
+  id          Int       @id(map: "PK__tmp_ms_x__3213E83F8596E432") @default(autoincrement())
   usuario_id  Int?
   produto_id  Int?
-  quantidade  Int       @default(1, map: "DF__tmp_ms_xx__quant__0E391C95")
+  nome        String?   @db.NVarChar(Max)
+  quantidade  Int       @default(1, map: "DF__tmp_ms_xx__quant__13F1F5EB")
   preco       Float?
   imagem      String?   @db.NVarChar(Max)
-  data_adicao DateTime? @default(now(), map: "DF__tmp_ms_xx__data___0F2D40CE") @db.DateTime
+  data_adicao DateTime? @default(now(), map: "DF__tmp_ms_xx__data___14E61A24") @db.DateTime
   usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__carrinho__usuari__3493CFA7")
 }
 
