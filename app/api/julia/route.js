@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const API_URL = 'https://api.zaia.app/v1.1/api';
 const API_TOKEN = process.env.ZAIA_API_TOKEN; // Recomendado armazenar o token em variáveis de ambiente
-const AGENT_ID = 27177;
+const AGENT_ID = 43186;
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders }); // Responde às requisições preflight
