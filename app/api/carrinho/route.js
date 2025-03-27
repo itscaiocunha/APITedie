@@ -24,7 +24,7 @@ export async function GET(request) {
   }
 
   try {
-    const itensCarrinho = await prisma.carrinho.findMany({
+    const itemMaisRecente = await prisma.carrinho.findFirst({
       where: { usuario_id: parseInt(usuario_id) },
       select: {
         id: true,
@@ -43,9 +43,7 @@ export async function GET(request) {
 
     return new NextResponse(JSON.stringify({
       success: true,
-      itens: itensCarrinho,
-      total_itens: itensCarrinho.length,
-      item_mais_recente: itensCarrinho[0]?.data_adicao || null
+      item: itemMaisRecente,
     }), { 
       status: 200,
       headers: corsHeaders
