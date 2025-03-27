@@ -24,8 +24,29 @@ export async function GET(request) {
   }
 
   try {
-    const itemMaisRecente = await prisma.carrinho.findFirst({
+    // Primeiro encontramos a data mais recente
+    const dataMaisRecente = await prisma.carrinho.findFirst({
       where: { usuario_id: parseInt(usuario_id) },
+      orderBy: { data_adicao: 'desc' },
+      select: { data_adicao: true }
+    });
+
+    if (!dataMaisRecente) {
+      return new NextResponse(JSON.stringify({
+        success: true,
+        itens: [],
+      }), { 
+        status: 200,
+        headers: corsHeaders
+      });
+    }
+
+    // Depois buscamos todos os itens com essa data
+    const itensRecentes = await prisma.carrinho.findMany({
+      where: { 
+        usuario_id: parseInt(usuario_id),
+        data_adicao: dataMaisRecente.data_adicao
+      },
       select: {
         id: true,
         usuario_id: true,
@@ -43,7 +64,8 @@ export async function GET(request) {
 
     return new NextResponse(JSON.stringify({
       success: true,
-      item: itemMaisRecente,
+      itens: itensRecentes,
+      data_adicao: dataMaisRecente.data_adicao
     }), { 
       status: 200,
       headers: corsHeaders
