@@ -1,16 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 import { LRUCache } from 'lru-cache';
 
-// Configuração do Prisma
-const baseDbUrl = process.env.DATABASE_URL;
-const dbUrl = process.env.NODE_ENV === 'production'
-  ? `${baseDbUrl}${baseDbUrl.includes('?') ? '&' : '?'}connection_limit=5&pool_timeout=10`
-  : baseDbUrl;
+// Configuração do Prisma para SQL Server
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+// Convert SQL Server connection string to Prisma format
+const prismaConnectionString = connectionString
+  .replace(/;/g, '&') // Replace semicolons with ampersands
+  .replace(/([^&=]+)=([^&]*)/g, (_, key, value) => `${key}=${encodeURIComponent(value)}`);
 
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: dbUrl
+      url: `sqlserver://${prismaConnectionString}`
     }
   }
 });
