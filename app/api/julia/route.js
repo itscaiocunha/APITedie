@@ -2,15 +2,17 @@ import { PrismaClient } from '@prisma/client';
 import { LRUCache } from 'lru-cache';
 
 // Configuração do Prisma
+const baseDbUrl = process.env.DATABASE_URL;
+const dbUrl = process.env.NODE_ENV === 'production'
+  ? `${baseDbUrl}${baseDbUrl.includes('?') ? '&' : '?'}connection_limit=5&pool_timeout=10`
+  : baseDbUrl;
+
 const prisma = new PrismaClient({
-  log: ['warn', 'error'],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL + (process.env.NODE_ENV === 'production' 
-        ? '?connection_limit=5&pool_timeout=10' 
-        : ''),
-    },
-  },
+      url: dbUrl
+    }
+  }
 });
 
 // Configuração do cache
