@@ -1,197 +1,105 @@
 import { PrismaClient } from '@prisma/client';
-import { LRUCache } from 'lru-cache';
 
-// Configuração do Prisma para SQL Server
-const connectionString = process.env.DATABASE_URL;
+const prisma = new PrismaClient();
 
-if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
-
-// Convert SQL Server connection string to Prisma format
-const prismaConnectionString = connectionString
-  .replace(/;/g, '&') // Replace semicolons with ampersands
-  .replace(/([^&=]+)=([^&]*)/g, (_, key, value) => `${key}=${encodeURIComponent(value)}`);
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: `sqlserver://${prismaConnectionString}`
-    }
-  }
-});
-
-// Configuração do cache
-const cache = new LRUCache({
-  max: 100,
-  ttl: 1000 * 60 * 5, // 5 minutos
-});
-
-// Configuração CORS
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://tedie.vercel.app",
+  "Access-Control-Allow-Origin": "https://tedie.vercel.app",  // Permite qualquer origem (ajuste conforme necessário)
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Configurações da API externa
 const API_URL = 'https://api.zaia.app/v1.1/api';
-const API_TOKEN = process.env.ZAIA_API_TOKEN;
+const API_TOKEN = process.env.ZAIA_API_TOKEN; // Recomendado armazenar o token em variáveis de ambiente
 const AGENT_ID = 43186;
 
-// Gerenciamento da conexão Prisma
-let prismaInitialized = false;
-
-async function ensurePrisma() {
-  if (!prismaInitialized) {
-    await prisma.$connect();
-    prismaInitialized = true;
-  }
-}
-
 export async function OPTIONS() {
-  return new Response(null, { 
-    status: 204, 
-    headers: corsHeaders 
-  });
+  return new Response(null, { status: 204, headers: corsHeaders }); // Responde às requisições preflight
 }
 
 export async function POST(request) {
-  const start = Date.now();
-  try {
-    // Ler o corpo da requisição apenas uma vez
-    const requestBody = await request.text();
-    let userMessage;
-    
+    const start = Date.now();
     try {
-      const parsedBody = JSON.parse(requestBody);
-      userMessage = parsedBody.message;
-    } catch (parseError) {
-      console.error('Erro ao parsear JSON:', parseError);
-      return new Response(JSON.stringify({ error: "Formato JSON inválido" }), {
-        status: 400,
-        headers: corsHeaders
-      });
+        const { message: userMessage } = await request.json();
+        if (!userMessage) {
+            return new Response(JSON.stringify({ error: "Mensagem do usuário é obrigatória." }), {
+                status: 400,
+                headers: corsHeaders
+            });
+        }
+
+        const message = `Listar o máximo possível de produtos que estão no treinamento de arquivos que se enquadram na seguinte mensagem: ${userMessage}`;
+
+        // Criar chat externo
+        const externalResponse = await fetch(`${API_URL}/external-generative-chat/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_TOKEN}`
+            },
+            body: JSON.stringify({ agentId: AGENT_ID })
+        });
+
+        if (!externalResponse.ok) {
+            throw new Error(`Erro ao criar chat externo: ${externalResponse.statusText}`);
+        }
+
+        const { id: chatId } = await externalResponse.json();
+        if (!chatId) {
+            throw new Error("Resposta inválida ao criar chat externo.");
+        }
+
+        // Enviar mensagem
+        const messageResponse = await fetch(`${API_URL}/external-generative-message/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_TOKEN}`
+            },
+            body: JSON.stringify({
+                agentId: AGENT_ID,
+                externalGenerativeChatId: chatId,
+                prompt: message,
+                streaming: false,
+                asMarkdown: true
+            })
+        });
+
+        if (!messageResponse.ok) {
+            throw new Error(`Erro ao enviar mensagem: ${messageResponse.statusText}`);
+        }
+
+        const { text: produtos } = await messageResponse.json();
+        if (!produtos) {
+            throw new Error("Resposta inválida da API externa.");
+        }
+
+        // Extração de IDs usando regex
+        const ids = [...produtos.matchAll(/Id:\s*(\d+)/g)].map(match => parseInt(match[1], 10));
+
+        if (!ids.length) {
+            return new Response(JSON.stringify({ message: "Nenhum ID de produto encontrado." }), { 
+                status: 404, 
+                headers: corsHeaders 
+            });
+        }
+
+        // Consulta ao banco de dados
+        const produtosBd = await prisma.produtos.findMany({
+            where: { id: { in: ids } }
+        });
+
+        const executionTime = Date.now() - start;
+
+        return new Response(JSON.stringify({ produtos: produtosBd, executionTime }), {
+            status: 200,
+            headers: corsHeaders
+        });
+
+    } catch (error) {
+        console.error(`Erro na função: ${error.message}`);
+        return new Response(JSON.stringify({ error: error.message, executionTime: Date.now() - start }), {
+            status: 500,
+            headers: corsHeaders
+        });
     }
-
-    if (!userMessage) {
-      return new Response(JSON.stringify({ error: "Mensagem do usuário é obrigatória." }), {
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    const cacheKey = JSON.stringify(userMessage);
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return new Response(JSON.stringify(cached), {
-        status: 200,
-        headers: corsHeaders
-      });
-    }
-
-    const message = `Listar o máximo possível de produtos que estão no treinamento de arquivos que se enquadram na seguinte mensagem: ${userMessage}`;
-
-    const [externalResponse, _] = await Promise.all([
-      fetch(`${API_URL}/external-generative-chat/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_TOKEN}`
-        },
-        body: JSON.stringify({ agentId: AGENT_ID })
-      }),
-      ensurePrisma()
-    ]);
-
-    if (!externalResponse.ok) {
-      throw new Error(`Erro ao criar chat externo: ${await externalResponse.text()}`);
-    }
-
-    const { id: chatId } = await externalResponse.json();
-    if (!chatId) {
-      throw new Error("Resposta inválida ao criar chat externo.");
-    }
-
-    const messageResponse = await fetch(`${API_URL}/external-generative-message/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`
-      },
-      body: JSON.stringify({
-        agentId: AGENT_ID,
-        externalGenerativeChatId: chatId,
-        prompt: message,
-        streaming: false,
-        asMarkdown: true
-      })
-    });
-
-    if (!messageResponse.ok) {
-      throw new Error(`Erro ao enviar mensagem: ${await messageResponse.text()}`);
-    }
-
-    const { text: produtos } = await messageResponse.json();
-    if (!produtos) {
-      throw new Error("Resposta inválida da API externa.");
-    }
-
-    // Extração de IDs
-    const ids = [];
-    const lines = produtos.split('\n');
-    
-    for (const line of lines) {
-      const match = line.match(/^(\d+);/);
-      if (match) {
-        const id = parseInt(match[1], 10);
-        if (!isNaN(id)) ids.push(id);
-      }
-    }
-
-    if (!ids.length) {
-      return new Response(JSON.stringify({ 
-        message: "Nenhum ID de produto encontrado.",
-        originalResponse: produtos
-      }), { 
-        status: 404, 
-        headers: corsHeaders 
-      });
-    }
-
-    const produtosBd = await prisma.produtos.findMany({
-      where: { id: { in: ids } },
-      select: {
-        id: true,
-        nome: true,
-        // outros campos necessários
-      }
-    });
-
-    const executionTime = Date.now() - start;
-    const apiResponse = {
-      produtos: produtosBd, 
-      executionTime,
-      originalIds: ids
-    };
-    
-    cache.set(cacheKey, apiResponse);
-
-    return new Response(JSON.stringify(apiResponse), {
-      status: 200,
-      headers: corsHeaders
-    });
-
-  } catch (error) {
-    console.error(`Erro na função: ${error.message}`);
-    return new Response(JSON.stringify({ 
-      error: error.message.includes("Body is unusable") 
-        ? "Erro ao processar a requisição" 
-        : error.message,
-      executionTime: Date.now() - start 
-    }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
 }
