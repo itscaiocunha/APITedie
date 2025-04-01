@@ -84,6 +84,7 @@ model produtos {
   imagem       String?        @db.NVarChar(100)
   ean          String?        @db.NVarChar(Max)
   IdEmpresa    Int?
+  refrigerado  Int?
   itens_pedido itens_pedido[]
 }
 
@@ -111,4 +112,11 @@ model enderecos {
   Estado      String  @db.Char(2)
   CEP         String  @db.Char(9)
   Pais        String  @default("Brasil", map: "DF__enderecos__Pais__625A9A57") @db.NVarChar(50)
+}
+
+model empresa {
+  Id            Int     @id(map: "PK_empresa") @default(autoincrement())
+  razao_social  String? @db.NVarChar(100)
+  cnpj          String? @db.NVarChar(20)
+  nome_fantasia String? @db.NVarChar(50)
 }
