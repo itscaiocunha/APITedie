@@ -35,7 +35,7 @@ export async function POST(req) {
         Cidade,
         Estado,
         CEP,
-        Pais: Pais || "Brasil", // Usa "Brasil" como padrão se não informado
+        Pais: Pais || "Brasil",
       },
     });
 
