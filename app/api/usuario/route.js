@@ -10,34 +10,78 @@ const headers = {
 
 export async function GET(req) {
   try {
-    // ID do usuário deve ser passado como parâmetro na URL (exemplo: /api/user?id=1)
     const url = new URL(req.url);
-    const userId = parseInt(url.searchParams.get("id"), 10);
+    const userIdParam = url.searchParams.get("id");
+    
+    if (!userIdParam) {
+      return new Response(
+        JSON.stringify({ message: "ID do usuário não fornecido" }), 
+        { status: 400, headers }
+      );
+    }
 
-    if (!userId) {
-      return new Response(JSON.stringify({ message: "ID do usuário não fornecido" }), { status: 400, headers });
+    const userId = parseInt(userIdParam, 10);
+    
+    if (isNaN(userId)) {
+      return new Response(
+        JSON.stringify({ message: "ID do usuário inválido" }), 
+        { status: 400, headers }
+      );
     }
 
     const user = await prisma.usuarios.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        nome: true,
-        cpf: true,
-        email: true,
-        telefone: true,
-        endereco: true,
-        tipo_usuario: true,
-      },
+      include: {
+        enderecos: true
+      }
     });
 
     if (!user) {
-      return new Response(JSON.stringify({ message: "Usuário não encontrado" }), { status: 404, headers });
+      return new Response(
+        JSON.stringify({ message: "Usuário não encontrado" }), 
+        { status: 404, headers }
+      );
     }
 
-    return new Response(JSON.stringify({ status: "success", user }), { status: 200, headers });
+    // Debug: log the complete user data from Prisma
+    console.log("Full user data from Prisma:", user);
+
+    // Format the response
+    const responseData = {
+      id: user.id,
+      nome: user.nome,
+      cpf: user.cpf,
+      email: user.email,
+      telefone: user.telefone,
+      tipo_usuario: user.tipo_usuario,
+      endereco: user.enderecos ? {
+        cep: user.enderecos.CEP,
+        logradouro: user.enderecos.Logradouro,
+        numero: user.enderecos.Numero,
+        complemento: user.enderecos.Complemento,
+        bairro: user.enderecos.Bairro,
+        cidade: user.enderecos.Cidade,
+        estado: user.enderecos.Estado,
+        pais: user.enderecos.Pais
+      } : null
+    };
+
+    return new Response(
+      JSON.stringify({ status: "success", user: responseData }), 
+      { status: 200, headers }
+    );
+    
   } catch (error) {
-    return new Response(JSON.stringify({ message: "Erro ao buscar usuário" }), { status: 500, headers });
+    console.error("Error fetching user:", error);
+    return new Response(
+      JSON.stringify({ 
+        message: "Erro ao buscar usuário",
+        error: error.message 
+      }), 
+      { status: 500, headers }
+    );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -55,7 +99,21 @@ export async function PUT(req) {
         nome: body.nome,
         cpf: body.cpf,
         telefone: body.telefone,
-        endereco: body.endereco,
+        enderecos: body.endereco ? {
+          update: {
+            cep: body.endereco.cep,
+            logradouro: body.endereco.logradouro,
+            numero: body.endereco.numero,
+            complemento: body.endereco.complemento,
+            bairro: body.endereco.bairro,
+            cidade: body.endereco.cidade,
+            estado: body.endereco.estado,
+            pais: body.endereco.pais
+          }
+        } : undefined
+      },
+      include: {
+        enderecos: true
       },
       select: {
         id: true,
@@ -63,12 +121,30 @@ export async function PUT(req) {
         cpf: true,
         email: true,
         telefone: true,
-        endereco: true,
         tipo_usuario: true,
-      },
+        enderecos: {
+          select: {
+            cep: true,
+            logradouro: true,
+            numero: true,
+            complemento: true,
+            bairro: true,
+            cidade: true,
+            estado: true,
+            pais: true
+          }
+        }
+      }
     });
 
-    return new Response(JSON.stringify({ status: "success", user: updatedUser }), { status: 200, headers });
+    // Reformatando a resposta para juntar os dados do usuário e endereço
+    const formattedUser = {
+      ...updatedUser,
+      ...updatedUser.enderecos
+    };
+    delete formattedUser.enderecos;
+
+    return new Response(JSON.stringify({ status: "success", user: formattedUser }), { status: 200, headers });
   } catch (error) {
     return new Response(JSON.stringify({ message: "Erro ao atualizar usuário" }), { status: 500, headers });
   }

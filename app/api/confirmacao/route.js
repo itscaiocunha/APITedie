@@ -11,7 +11,7 @@ const headers = {
 export async function GET(req) {
   try {
     const url = new URL(req.url);
-    const userEmail = url.searchParams.get("email"); // Removed parseInt
+    const userEmail = url.searchParams.get("email");
 
     if (!userEmail) {
       return new Response(JSON.stringify({ message: "Email do usuário não fornecido" }), { 
