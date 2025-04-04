@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // Configurações da aplicação
 const CONFIG = {
   CORS: {
-    ALLOWED_ORIGINS: ['https://tedie.vercel.app'],
+    ALLOWED_ORIGINS: ['*'],
     ALLOWED_METHODS: 'GET, POST, OPTIONS',
     ALLOWED_HEADERS: 'Content-Type, Authorization'
   },
