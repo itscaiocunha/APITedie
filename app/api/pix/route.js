@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const MERCADO_PAGO_TOKEN = process.env.MP_ACCESS_TOKEN; // Use variáveis de ambiente
+const MERCADO_PAGO_TOKEN = process.env.MP_ACCESS_TOKEN;
 
 export async function POST(req) {
   try {

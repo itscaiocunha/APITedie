@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 // ✅ Definir cabeçalhos CORS globais
 const headers = {
-  "Access-Control-Allow-Origin": "*",  // Permite qualquer origem
+  "Access-Control-Allow-Origin": "*", 
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",  // Métodos permitidos
   "Access-Control-Allow-Headers": "Content-Type, Authorization",  // Cabeçalhos permitidos
 };

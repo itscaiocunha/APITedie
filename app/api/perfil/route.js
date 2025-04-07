@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // ✅ Definir cabeçalhos CORS
 const headers = {
-  "Access-Control-Allow-Origin": "*",  // Ajuste para domínio específico se necessário
+  "Access-Control-Allow-Origin": "*", 
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
