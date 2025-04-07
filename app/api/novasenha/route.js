@@ -1,81 +1,94 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+const headers = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers
+  });
+}
 
 export async function POST(req) {
   try {
     const { email, novaSenha } = await req.json();
-    
-    // Validações básicas
+    console.log("📩 Dados recebidos para redefinição:", { email });
+
+    // Validação dos campos obrigatórios
     if (!email || !novaSenha) {
       return new Response(
-        JSON.stringify({ error: 'E-mail e nova senha são obrigatórios' }),
-        { status: 400 }
+        JSON.stringify({ message: 'Email e nova senha são obrigatórios' }),
+        {
+          status: 400,
+          headers
+        }
       );
     }
 
-    if (novaSenha.length < 6) {
-      return new Response(
-        JSON.stringify({ error: 'A senha deve ter pelo menos 6 caracteres' }),
-        { status: 400 }
-      );
-    }
-
-    // Verifica se o usuário existe
+    // Verifica se usuário existe
     const usuario = await prisma.usuarios.findUnique({
       where: { email }
     });
 
     if (!usuario) {
       return new Response(
-        JSON.stringify({ error: 'E-mail não encontrado' }),
-        { status: 404 }
+        JSON.stringify({ message: 'Usuário não encontrado' }),
+        {
+          status: 404,
+          headers
+        }
       );
     }
 
-    // Cria o hash da nova senha
-    const salt = await bcrypt.genSalt(10);
-    const senhaHash = await bcrypt.hash(novaSenha, salt);
+    // Hash da nova senha (usando o mesmo método do cadastro)
+    const hashedSenha = bcrypt.hashSync(novaSenha, 10);
 
     // Atualiza a senha no banco de dados
     const usuarioAtualizado = await prisma.usuarios.update({
       where: { email },
-      data: { 
-        senha: senhaHash,
-        // Opcional: registrar data de atualização
-        // data_atualizacao: new Date()
+      data: {
+        senha: hashedSenha
       }
     });
 
+    console.log("✅ Senha atualizada para usuário:", usuarioAtualizado.email);
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Senha atualizada com sucesso!'
+      JSON.stringify({
+        status: "success",
+        message: "Senha redefinida com sucesso",
+        data: {
+          email: usuarioAtualizado.email,
+          atualizado_em: new Date()
+        }
       }),
-      { status: 200 }
+      {
+        status: 200,
+        headers
+      }
     );
 
   } catch (error) {
-    console.error('Erro ao redefinir senha:', error);
-    
-    // Tratamento específico para erros do Prisma
-    if (error.code === 'P2025') {
-      return new Response(
-        JSON.stringify({ error: 'Usuário não encontrado' }),
-        { status: 404 }
-      );
-    }
+    console.error("❌ Erro na redefinição de senha:", error);
 
     return new Response(
-      JSON.stringify({ 
-        error: 'Erro interno ao redefinir senha',
-        details: process.env.NODE_ENV === 'development' ? error.message : null
+      JSON.stringify({
+        message: 'Erro no servidor',
+        error: error.message
       }),
-      { status: 500 }
+      {
+        status: 500,
+        headers
+      }
     );
   } finally {
-    // Fecha a conexão do Prisma
     await prisma.$disconnect();
   }
 }
