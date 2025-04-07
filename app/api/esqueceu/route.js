@@ -14,12 +14,11 @@ export async function POST(req) {
       );
     }
 
-    // Cria o link com o e-mail diretamente na URL
-    const resetLink = `https://tedie.vercel.app/newpass?email=${encodeURIComponent(email)}`;
+    const resetLink = `https://tedie.vercel.app/newpass?email=${email}`;
 
     const msg = {
       to: email,
-      from: 'caiocunha@w7agencia.com.br', // DEVE estar verificado no SendGrid
+      from: 'caiocunha@w7agencia.com.br',
       subject: 'Redefinição de Senha',
       text: `Clique no link para redefinir sua senha: ${resetLink}`,
       html: `
