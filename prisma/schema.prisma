@@ -63,11 +63,12 @@ model pagamentos {
 }
 
 model pedidos {
-  id           Int            @id(map: "PK__pedidos__3213E83FFF94F323") @default(autoincrement())
+  id           Int            @id(map: "PK__tmp_ms_x__3213E83FD1FB4650") @default(autoincrement())
   usuario_id   Int?
   total        Decimal        @db.Decimal(10, 2)
-  status       String?        @default("pendente", map: "DF__pedidos__status__395884C4") @db.VarChar(10)
-  data_pedido  DateTime?      @default(now(), map: "DF__pedidos__data_pe__3A4CA8FD") @db.DateTime
+  endereco_id  Int?
+  status       String?        @default("pendente", map: "DF__tmp_ms_xx__statu__2334397B") @db.VarChar(10)
+  data_pedido  DateTime?      @default(now(), map: "DF__tmp_ms_xx__data___24285DB4") @db.DateTime
   envios       envios[]
   itens_pedido itens_pedido[]
   pagamentos   pagamentos[]
