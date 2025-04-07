@@ -6,18 +6,20 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 export async function POST(req) {
   try {
     const { email } = await req.json();
-    const resetLink = "https://tedie.vercel.app/newpass";
-
-    if (!email || !resetLink) {
+    
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: 'E-mail e link de reset são obrigatórios' }),
+        JSON.stringify({ error: 'E-mail é obrigatório' }),
         { status: 400 }
       );
     }
 
+    // Cria o link com o e-mail diretamente na URL
+    const resetLink = `https://tedie.vercel.app/newpass?email=${encodeURIComponent(email)}`;
+
     const msg = {
       to: email,
-      from: 'caiocunha@w7agencia.com.br',
+      from: 'caiocunha@w7agencia.com.br', // DEVE estar verificado no SendGrid
       subject: 'Redefinição de Senha',
       text: `Clique no link para redefinir sua senha: ${resetLink}`,
       html: `
@@ -36,9 +38,17 @@ export async function POST(req) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Erro ao enviar e-mail:', error);
+    console.error('Erro ao enviar e-mail:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.body
+    });
+    
     return new Response(
-      JSON.stringify({ error: 'Falha ao enviar e-mail' }),
+      JSON.stringify({ 
+        error: 'Falha ao enviar e-mail',
+        details: error.response?.body || error.message 
+      }),
       { status: 500 }
     );
   }
