@@ -1,5 +1,7 @@
-import { prisma } from '@/lib/prisma'; // Importe sua instância do Prisma
-import bcrypt from 'bcryptjs'; // Para hash da senha
+import { PrismaClient } from "@prisma/client";
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
 
 export async function POST(req) {
   try {
@@ -36,12 +38,12 @@ export async function POST(req) {
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(novaSenha, salt);
 
-    // Atualiza a senha no banco de dados usando Prisma
+    // Atualiza a senha no banco de dados
     const usuarioAtualizado = await prisma.usuarios.update({
       where: { email },
       data: { 
         senha: senhaHash,
-        // Você pode adicionar data_atualizacao se quiser registrar quando a senha foi alterada
+        // Opcional: registrar data de atualização
         // data_atualizacao: new Date()
       }
     });
@@ -49,13 +51,7 @@ export async function POST(req) {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Senha atualizada com sucesso!',
-        data: {
-          id: usuarioAtualizado.id,
-          email: usuarioAtualizado.email,
-          nome: usuarioAtualizado.nome
-          // Não retornar dados sensíveis
-        }
+        message: 'Senha atualizada com sucesso!'
       }),
       { status: 200 }
     );
@@ -78,5 +74,8 @@ export async function POST(req) {
       }),
       { status: 500 }
     );
+  } finally {
+    // Fecha a conexão do Prisma
+    await prisma.$disconnect();
   }
 }
