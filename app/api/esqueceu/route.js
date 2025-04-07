@@ -14,7 +14,7 @@ export async function POST(req) {
       );
     }
 
-    const resetLink = `https://tedie.vercel.app/newpass?email=${email}`;
+    const resetLink = `https://tedie.com.br/newpass?email=${email}`;
 
     const msg = {
       to: email,
@@ -23,9 +23,37 @@ export async function POST(req) {
       text: `Clique no link para redefinir sua senha: ${resetLink}`,
       html: `
         <div>
-          <h1>Redefina sua senha</h1>
-          <p>Clique <a href="${resetLink}">aqui</a> para redefinir sua senha.</p>
-          <p>Se você não solicitou isso, ignore este e-mail.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9f9f9; padding: 20px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; padding: 40px; font-family: Arial, sans-serif; color: #333333;">
+                  <tr>
+                    <td align="center" style="font-size: 24px; font-weight: bold; padding-bottom: 20px;">
+                      Redefina sua senha
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-size: 16px; line-height: 24px; padding-bottom: 30px;">
+                      Recebemos uma solicitação para redefinir sua senha.<br>
+                      Clique no botão abaixo para criar uma nova senha:
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-bottom: 30px;">
+                      <a href="${resetLink}" style="background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; display: inline-block;">
+                        Redefinir Senha
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-size: 14px; color: #888888;">
+                      Se você não solicitou essa alteração, pode ignorar este e-mail.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
       `,
     };
