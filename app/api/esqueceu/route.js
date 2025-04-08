@@ -18,7 +18,7 @@ export async function POST(req) {
     const msg = {
       to: email,
       from: "caiocunha@w7agencia.com.br",
-      subject: "Redefinição de Senha",
+      subject: "Tedie - Redefinição de Senha",
       text: `Clique no link para redefinir sua senha: ${resetLink}`,
       html: `
         <div>
