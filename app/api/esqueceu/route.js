@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const headers = {
-  "Access-Control-Allow-Origin": "http://tedie.com.br", // 👈 Altere aqui se for outro domínio
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Credentials": "true",
