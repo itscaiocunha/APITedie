@@ -65,11 +65,11 @@ export async function POST(req) {
             </tr>
 
             <!-- Footer -->
-            <tr>
+            <!-- <tr>
               <td align="center" style="padding-bottom: 20px;">
                 <img src="https://tedie.vercel.app/logo_tedie.svg" alt="Tedie!" width="120" style="display:block;" />
               </td>
-            </tr>
+            </tr> -->
           </table>
         </td>
       </tr>
