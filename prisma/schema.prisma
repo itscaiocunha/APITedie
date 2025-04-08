@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
-  url      = env("DATABASE_URL")
+  provider          = "sqlserver"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model carrinho {
@@ -104,6 +105,16 @@ model usuarios {
   enderecos    enderecos? @relation(fields: [endereco_id], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_usuarios_enderecos")
 
   @@index([endereco_id], map: "IX_usuarios_endereco_id")
+}
+
+model PasswordResetToken {
+  id        String   @id(map: "PK__Password__3213E83FC4D387F8") @default(dbgenerated("newid()"), map: "DF__PasswordRese__id__2CBDA3B5") @db.UniqueIdentifier
+  token     String   @unique(map: "UQ__Password__CA90DA7A84B7842A") @db.NVarChar(255)
+  email     String   @db.NVarChar(255)
+  expiresAt DateTime
+  createdAt DateTime @default(dbgenerated("sysdatetime()"), map: "DF__PasswordR__creat__2DB1C7EE")
+
+  @@index([email], map: "idx_email")
 }
 
 model enderecos {

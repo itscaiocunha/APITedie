@@ -18,45 +18,64 @@ export async function OPTIONS() {
 
 export async function POST(req) {
   try {
-    const { email, novaSenha } = await req.json();
-    console.log("📩 Dados recebidos para redefinição:", { email });
+    const { token, novaSenha } = await req.json();
+    console.log("📩 Dados recebidos para redefinição:", { token });
 
-    // Validação dos campos obrigatórios
-    if (!email || !novaSenha) {
+    if (!token || !novaSenha) {
       return new Response(
-        JSON.stringify({ message: 'Email e nova senha são obrigatórios' }),
-        {
-          status: 400,
-          headers
-        }
+        JSON.stringify({ message: 'Token e nova senha são obrigatórios' }),
+        { status: 400, headers }
       );
     }
 
-    // Verifica se usuário existe
+    // 🔍 Busca o token no banco
+    const tokenData = await prisma.passwordResetToken.findUnique({
+      where: { token }
+    });
+
+    if (!tokenData) {
+      return new Response(
+        JSON.stringify({ message: 'Token inválido' }),
+        { status: 400, headers }
+      );
+    }
+
+    // ⏳ Verifica se o token expirou
+    const now = new Date();
+    if (tokenData.expiresAt < now) {
+      // Exclui o token expirado
+      await prisma.passwordResetToken.delete({ where: { token } });
+      return new Response(
+        JSON.stringify({ message: 'Token expirado' }),
+        { status: 400, headers }
+      );
+    }
+
+    // 🔒 Busca o usuário pelo e-mail do token
     const usuario = await prisma.usuarios.findUnique({
-      where: { email }
+      where: { email: tokenData.email }
     });
 
     if (!usuario) {
       return new Response(
         JSON.stringify({ message: 'Usuário não encontrado' }),
-        {
-          status: 404,
-          headers
-        }
+        { status: 404, headers }
       );
     }
 
-    // Hash da nova senha (usando o mesmo método do cadastro)
+    // 🔐 Gera o hash da nova senha
     const hashedSenha = bcrypt.hashSync(novaSenha, 10);
 
-    // Atualiza a senha no banco de dados
+    // 🛠 Atualiza a senha do usuário
     const usuarioAtualizado = await prisma.usuarios.update({
-      where: { email },
+      where: { email: tokenData.email },
       data: {
         senha: hashedSenha
       }
     });
+
+    // 🧹 Deleta o token após uso
+    await prisma.passwordResetToken.delete({ where: { token } });
 
     console.log("✅ Senha atualizada para usuário:", usuarioAtualizado.email);
 
@@ -69,10 +88,7 @@ export async function POST(req) {
           atualizado_em: new Date()
         }
       }),
-      {
-        status: 200,
-        headers
-      }
+      { status: 200, headers }
     );
 
   } catch (error) {
@@ -83,10 +99,7 @@ export async function POST(req) {
         message: 'Erro no servidor',
         error: error.message
       }),
-      {
-        status: 500,
-        headers
-      }
+      { status: 500, headers }
     );
   } finally {
     await prisma.$disconnect();
