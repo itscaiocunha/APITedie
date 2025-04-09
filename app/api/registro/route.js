@@ -22,7 +22,8 @@ export async function POST(req) {
     const body = await req.json();
     console.log("📩 Dados recebidos:", body);
 
-    const { nome, cpf, email, senha, telefone } = body;
+    // Extrai os campos do body (agora usando data_nascimento)
+    const { nome, cpf, email, senha, telefone, data_nascimento } = body;
 
     // Validação dos campos obrigatórios
     if (!nome || !email || !senha) {
@@ -35,17 +36,73 @@ export async function POST(req) {
       );
     }
 
-    // Verifica se usuário já existe (por email ou cpf, se cpf foi fornecido)
-    const whereClause = cpf ? { OR: [{ email }, { cpf }] } : { email };
+    // Função para formatar a data de DD/MM/YYYY para Date
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+      
+      // Verifica se já está no formato ISO (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date;
+      }
+      
+      // Converte de DD/MM/YYYY para Date
+      const parts = dateString.split('/');
+      if (parts.length !== 3) return null;
+      
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Mês é 0-based
+      const year = parseInt(parts[2], 10);
+      
+      const date = new Date(year, month, day);
+      
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) return null;
+      
+      // Verifica se os componentes da data bateram com o input
+      if (
+        date.getDate() !== day ||
+        date.getMonth() !== month ||
+        date.getFullYear() !== year
+      ) {
+        return null;
+      }
+      
+      return date;
+    };
+
+    // Processa a data de nascimento
+    const parsedDate = parseDate(data_nascimento);
     
+    if (data_nascimento && !parsedDate) {
+      return new Response(
+        JSON.stringify({ 
+          message: 'Formato de data inválido. Use DD/MM/YYYY',
+          received: data_nascimento
+        }),
+        {
+          status: 400,
+          headers
+        }
+      );
+    }
+
+    // Verifica se usuário já existe
     const existingUser = await prisma.usuarios.findFirst({
-      where: whereClause
+      where: {
+        OR: [
+          { email },
+          ...(cpf ? [{ cpf }] : [])
+        ]
+      }
     });
 
     if (existingUser) {
       return new Response(
         JSON.stringify({ 
-          message: cpf ? 'Usuário já cadastrado com este email ou CPF' : 'Usuário já cadastrado com este email'
+          message: cpf 
+            ? 'Usuário já cadastrado com este email ou CPF' 
+            : 'Usuário já cadastrado com este email'
         }),
         {
           status: 400,
@@ -55,44 +112,47 @@ export async function POST(req) {
     }
 
     // Hash da senha
-    const hashedSenha = bcrypt.hashSync(senha, 10);
+    const hashedSenha = await bcrypt.hash(senha, 10);
 
-    // Criação do novo usuário
+    // Criação do usuário
     const newUser = await prisma.usuarios.create({
       data: {
         nome,
-        cpf: cpf || null, // CPF é opcional no schema
+        cpf: cpf || null,
         email,
         senha: hashedSenha,
         telefone: telefone || null,
-        tipo_usuario: "cliente", // Valor padrão definido no schema
+        data_nascimento: parsedDate,
+        tipo_usuario: "cliente",
         data_criacao: new Date(),
-        // endereco_id não é fornecido no cadastro inicial
       }
     });
 
-    if (!newUser || !newUser.id) {
-      throw new Error("Erro ao criar usuário no banco de dados");
-    }
-
-    // Geração do token JWT
+    // Gera o token JWT
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, tipo_usuario: newUser.tipo_usuario },
-      'secreto', // Recomendo usar uma variável de ambiente para o secret
+      {
+        id: newUser.id,
+        email: newUser.email,
+        tipo_usuario: newUser.tipo_usuario
+      },
+      process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '1h' }
     );
 
+    // Retorna a resposta
     return new Response(
       JSON.stringify({
         status: "success",
         message: "Usuário registrado com sucesso",
-        data: { 
+        data: {
           token,
           user: {
             id: newUser.id,
             nome: newUser.nome,
             email: newUser.email,
-            tipo_usuario: newUser.tipo_usuario
+            tipo_usuario: newUser.tipo_usuario,
+            data_nascimento: newUser.data_nascimento,
+            telefone: newUser.telefone
           }
         }
       }),
@@ -104,7 +164,6 @@ export async function POST(req) {
 
   } catch (error) {
     console.error("❌ Erro no servidor:", error);
-
     return new Response(
       JSON.stringify({
         message: 'Erro no servidor',

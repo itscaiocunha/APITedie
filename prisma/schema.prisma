@@ -91,18 +91,19 @@ model produtos {
 }
 
 model usuarios {
-  id           Int        @id(map: "PK__tmp_ms_x__3213E83F1EE4C6CF") @default(autoincrement())
-  nome         String     @db.NVarChar(100)
-  cpf          String?    @db.NVarChar(15)
-  email        String     @unique(map: "UQ__tmp_ms_x__AB6E6164EFC01760") @db.NVarChar(100)
-  senha        String     @db.NVarChar(255)
-  telefone     String?    @db.NVarChar(20)
-  endereco_id  Int?
-  tipo_usuario String?    @default("cliente", map: "DF__tmp_ms_xx__tipo___1B9317B3") @db.VarChar(10)
-  data_criacao DateTime?  @default(now(), map: "DF__tmp_ms_xx__data___1C873BEC") @db.DateTime
-  carrinho     carrinho[]
-  pedidos      pedidos[]
-  enderecos    enderecos? @relation(fields: [endereco_id], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_usuarios_enderecos")
+  id              Int        @id(map: "PK__tmp_ms_x__3213E83F1EE4C6CF") @default(autoincrement())
+  nome            String     @db.NVarChar(100)
+  cpf             String?    @db.NVarChar(15)
+  email           String     @unique(map: "UQ__tmp_ms_x__AB6E6164EFC01760") @db.NVarChar(100)
+  senha           String     @db.NVarChar(255)
+  telefone        String?    @db.NVarChar(20)
+  endereco_id     Int?
+  tipo_usuario    String?    @default("cliente", map: "DF__tmp_ms_xx__tipo___1B9317B3") @db.VarChar(10)
+  data_criacao    DateTime?  @default(now(), map: "DF__tmp_ms_xx__data___1C873BEC") @db.DateTime
+  data_nascimento DateTime?  @db.DateTime
+  carrinho        carrinho[]
+  pedidos         pedidos[]
+  enderecos       enderecos? @relation(fields: [endereco_id], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_usuarios_enderecos")
 
   @@index([endereco_id], map: "IX_usuarios_endereco_id")
 }
