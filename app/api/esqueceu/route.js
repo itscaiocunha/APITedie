@@ -50,7 +50,7 @@ export async function POST(req) {
       },
     });
 
-    const resetLink = `https://www.tedie.com.br/newpass?token=${token}`;
+    const resetLink = `https://www.tedie.com.br/nova-senha?token=${token}`;
 
     if (user) {
       const msg = {
