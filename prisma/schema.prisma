@@ -68,7 +68,7 @@ model pedidos {
   usuario_id   Int?
   total        Decimal        @db.Decimal(10, 2)
   endereco_id  Int?
-  status       String?        @default("pendente", map: "DF__tmp_ms_xx__statu__2334397B") @db.VarChar(10)
+  status       String?        @db.VarChar(10)
   data_pedido  DateTime?      @default(now(), map: "DF__tmp_ms_xx__data___24285DB4") @db.DateTime
   envios       envios[]
   itens_pedido itens_pedido[]
@@ -100,7 +100,7 @@ model usuarios {
   endereco_id     Int?
   tipo_usuario    String?    @default("cliente", map: "DF__tmp_ms_xx__tipo___1B9317B3") @db.VarChar(10)
   data_criacao    DateTime?  @default(now(), map: "DF__tmp_ms_xx__data___1C873BEC") @db.DateTime
-  data_nascimento DateTime?  @db.DateTime
+  data_nascimento DateTime?  @db.Date
   carrinho        carrinho[]
   pedidos         pedidos[]
   enderecos       enderecos? @relation(fields: [endereco_id], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_usuarios_enderecos")

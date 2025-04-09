@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const headers = {
-  "Access-Control-Allow-Origin": "http://tedie.com.br", // 👈 Altere aqui se for outro domínio
+  "Access-Control-Allow-Origin": "https://www.tedie.com.br",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Credentials": "true",
@@ -50,7 +50,7 @@ export async function POST(req) {
       },
     });
 
-    const resetLink = `https://tedie.com.br/newpass?token=${token}`;
+    const resetLink = `https://www.tedie.com.br/nova-senha?token=${token}`;
 
     if (user) {
       const msg = {
