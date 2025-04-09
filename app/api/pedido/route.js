@@ -17,7 +17,7 @@ export async function POST(request) {
   const start = Date.now();
 
   try {
-    const { itens, total, usuario_id } = await request.json();
+    const { itens, total, usuario_id, endereco_id } = await request.json();
 
     if (!usuario_id) {
       return new Response(JSON.stringify({ error: "ID do usuário é obrigatório" }), {
@@ -25,6 +25,13 @@ export async function POST(request) {
         headers: corsHeaders,
       });
     }
+
+    if (!endereco_id) {
+      return new Response(JSON.stringify({ error: "ID do endereço é obrigatório" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
+    }    
 
     if (!itens || itens.length === 0) {
       return new Response(JSON.stringify({ error: "Nenhum item no pedido" }), {
@@ -37,6 +44,7 @@ export async function POST(request) {
       data: {
         usuario_id,
         total,
+        endereco_id,
         status: "pendente",
         data_pedido: new Date(),
         itens_pedido: {
