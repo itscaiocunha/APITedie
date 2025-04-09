@@ -17,7 +17,7 @@ export async function POST(request) {
   const start = Date.now();
 
   try {
-    const { itens, total, usuario_id, endereco_id } = await request.json();
+    const { itens, total, usuario_id, endereco_id, status } = await request.json();
 
     if (!usuario_id) {
       return new Response(JSON.stringify({ error: "ID do usuário é obrigatório" }), {
@@ -28,6 +28,13 @@ export async function POST(request) {
 
     if (!endereco_id) {
       return new Response(JSON.stringify({ error: "ID do endereço é obrigatório" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
+    }    
+
+    if (!status) {
+      return new Response(JSON.stringify({ error: "Status do pedido é obrigatório" }), {
         status: 400,
         headers: corsHeaders,
       });
@@ -45,7 +52,7 @@ export async function POST(request) {
         usuario_id,
         total,
         endereco_id,
-        status: "pendente",
+        status,
         data_pedido: new Date(),
         itens_pedido: {
           create: itens.map((item) => ({
