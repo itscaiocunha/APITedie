@@ -26,18 +26,35 @@ export async function POST(req) {
       );
     }
 
+    const complementoNormalizado = Complemento?.trim() === "" ? null : Complemento?.trim();
+
+    // 🔍 Verifica se já existe um endereço com CEP + Número (e opcionalmente Complemento)
+    const enderecoExistente = await prisma.enderecos.findFirst({
+      where: {
+        CEP,
+        Numero,
+      },
+    });
+    
+    if (enderecoExistente) {
+      return NextResponse.json(
+        { enderecoExistente, jaExistente: true },
+        { status: 200, headers: corsHeaders }
+      );
+    }
+    
     const novoEndereco = await prisma.enderecos.create({
       data: {
         Logradouro,
         Numero,
-        Complemento,
+        Complemento: complementoNormalizado,
         Bairro,
         Cidade,
         Estado,
         CEP,
         Pais: Pais || "Brasil",
       },
-    });
+    });    
 
     return NextResponse.json(novoEndereco, { status: 201, headers: corsHeaders });
   } catch (error) {
@@ -47,6 +64,7 @@ export async function POST(req) {
     );
   }
 }
+
 
 // 📍 GET para listar todos os endereços
 export async function GET() {
