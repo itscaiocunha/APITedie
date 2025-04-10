@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -7,6 +8,22 @@ const headers = {
   "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+// Funções auxiliares
+async function comparePassword(plainPassword, hashedPassword) {
+  return await bcrypt.compare(plainPassword, hashedPassword);
+}
+
+async function hashPassword(password) {
+  return await bcrypt.hash(password, 10);
+}
+
+function validarCPF(cpf) {
+  // Implementação básica - considere usar uma validação mais robusta
+  if (!cpf) return false;
+  const cleanedCPF = cpf.replace(/\D/g, '');
+  return cleanedCPF.length === 11;
+}
 
 export async function GET(req) {
   try {
@@ -42,9 +59,6 @@ export async function GET(req) {
         { status: 404, headers }
       );
     }
-
-    // Debug: log the complete user data from Prisma
-    console.log("Full user data from Prisma:", user);
 
     // Format the response
     const responseData = {
@@ -90,63 +104,123 @@ export async function PUT(req) {
     const body = await req.json();
 
     if (!body.id) {
-      return new Response(JSON.stringify({ message: "ID do usuário é obrigatório" }), { status: 400, headers });
+      return new Response(
+        JSON.stringify({ message: "ID do usuário é obrigatório" }), 
+        { status: 400, headers }
+      );
     }
 
+    // Verifica se o usuário existe
+    const user = await prisma.usuarios.findUnique({
+      where: { id: body.id }
+    });
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ message: "Usuário não encontrado" }), 
+        { status: 404, headers }
+      );
+    }
+
+    // Objeto com dados para atualização
+    const updateData = {
+      nome: body.nome,
+      telefone: body.telefone
+    };
+
+    // Lógica para alteração de senha
+    if (body.senhaAtual || body.novaSenha) {
+      if (!body.senhaAtual || !body.novaSenha) {
+        return new Response(
+          JSON.stringify({ 
+            message: "Para alterar a senha, forneça tanto a senha atual quanto a nova senha"
+          }), 
+          { status: 400, headers }
+        );
+      }
+
+      // Verifica se a senha atual está correta
+      const senhaValida = await comparePassword(body.senhaAtual, user.senha);
+      
+      if (!senhaValida) {
+        return new Response(
+          JSON.stringify({ message: "Senha atual incorreta" }), 
+          { status: 401, headers }
+        );
+      }
+
+      // Valida força da nova senha (mínimo 8 caracteres)
+      if (body.novaSenha.length < 8) {
+        return new Response(
+          JSON.stringify({ 
+            message: "A nova senha deve ter pelo menos 8 caracteres"
+          }), 
+          { status: 400, headers }
+        );
+      }
+
+      // Criptografa a nova senha
+      updateData.senha = await hashPassword(body.novaSenha);
+    }
+
+    // Atualiza CPF se fornecido e válido
+    if (body.cpf) {
+      if (!validarCPF(body.cpf)) {
+        return new Response(
+          JSON.stringify({ message: "CPF inválido" }), 
+          { status: 400, headers }
+        );
+      }
+      updateData.cpf = body.cpf.replace(/\D/g, '');
+    }
+
+    // Atualiza o usuário no banco de dados
     const updatedUser = await prisma.usuarios.update({
       where: { id: body.id },
-      data: {
-        nome: body.nome,
-        cpf: body.cpf,
-        telefone: body.telefone,
-        enderecos: body.endereco ? {
-          update: {
-            cep: body.endereco.cep,
-            logradouro: body.endereco.logradouro,
-            numero: body.endereco.numero,
-            complemento: body.endereco.complemento,
-            bairro: body.endereco.bairro,
-            cidade: body.endereco.cidade,
-            estado: body.endereco.estado,
-            pais: body.endereco.pais
-          }
-        } : undefined
-      },
+      data: updateData,
       include: {
         enderecos: true
-      },
-      select: {
-        id: true,
-        nome: true,
-        cpf: true,
-        email: true,
-        telefone: true,
-        tipo_usuario: true,
-        enderecos: {
-          select: {
-            cep: true,
-            logradouro: true,
-            numero: true,
-            complemento: true,
-            bairro: true,
-            cidade: true,
-            estado: true,
-            pais: true
-          }
-        }
       }
     });
 
-    // Reformatando a resposta para juntar os dados do usuário e endereço
-    const formattedUser = {
-      ...updatedUser,
-      ...updatedUser.enderecos
-    };
-    delete formattedUser.enderecos;
+    // Formata a resposta (removendo a senha)
+    const { senha, ...userWithoutPassword } = updatedUser;
 
-    return new Response(JSON.stringify({ status: "success", user: formattedUser }), { status: 200, headers });
+    const responseData = {
+      ...userWithoutPassword,
+      endereco: updatedUser.enderecos ? {
+        cep: updatedUser.enderecos.CEP,
+        logradouro: updatedUser.enderecos.Logradouro,
+        numero: updatedUser.enderecos.Numero,
+        complemento: updatedUser.enderecos.Complemento,
+        bairro: updatedUser.enderecos.Bairro,
+        cidade: updatedUser.enderecos.Cidade,
+        estado: updatedUser.enderecos.Estado,
+        pais: updatedUser.enderecos.Pais
+      } : null
+    };
+
+    return new Response(
+      JSON.stringify({ 
+        status: "success", 
+        message: "Usuário atualizado com sucesso",
+        user: responseData 
+      }), 
+      { status: 200, headers }
+    );
+
   } catch (error) {
-    return new Response(JSON.stringify({ message: "Erro ao atualizar usuário" }), { status: 500, headers });
+    console.error("Erro detalhado:", error);
+    return new Response(
+      JSON.stringify({ 
+        message: "Erro ao atualizar usuário",
+        error: error.message,
+        details: error.meta || null
+      }), 
+      { status: 500, headers }
+    );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
