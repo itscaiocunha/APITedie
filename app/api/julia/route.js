@@ -86,7 +86,7 @@ export async function POST(request) {
     }
 
     // Criação do prompt para a Zaia
-    const prompt = `Liste produtos para: "${userMessage}". Formato: Id: [número] | Nome: [nome do produto]`;
+    const prompt = `Liste produtos para: "${userMessage}". Formato: Número: [nome do produto]`;
 
     // Integração com a API Zaia
     const chatSession = await createZaiaChatSession();
@@ -196,9 +196,25 @@ async function sendZaiaMessage(chatId, prompt) {
 
 // Função para extrair produtos da resposta da Zaia
 function parseZaiaResponse(responseText) {
-  // Padrões de reconhecimento
+  // Padrões de reconhecimento em ordem de prioridade
   const patterns = [
-    // Formato 1: "Id: 123 | Nome: Produto X"
+    // Formato 1: "1: Nome do Produto - Descrição"
+    {
+      regex: /^(\d+):\s*([^\n-]+)(?:\s*-[^\n]*)?/gm,
+      mapper: match => ({
+        id: parseInt(match[1]),
+        name: match[2].trim()
+      })
+    },
+    // Formato 2: "1. Nome do Produto"
+    {
+      regex: /^(\d+)\.\s*([^\n]+)/gm,
+      mapper: match => ({
+        id: parseInt(match[1]),
+        name: match[2].trim()
+      })
+    },
+    // Formato 3: "Id: 123 | Nome: Produto X"
     {
       regex: /Id:\s*(\d+)\s*\|\s*Nome:\s*([^\n]+)/g,
       mapper: match => ({
@@ -206,14 +222,7 @@ function parseZaiaResponse(responseText) {
         name: match[2].trim()
       })
     },
-    // Formato 2: "1; Produto X"
-    {
-      regex: /^(\d+);\s*([^\n]+)/gm,
-      mapper: match => ({
-        name: match[2].trim()
-      })
-    },
-    // Formato 3: "- Produto X"
+    // Formato 4: "- Nome do Produto"
     {
       regex: /^-\s*([^\n]+)/gm,
       mapper: match => ({
@@ -242,7 +251,10 @@ async function fetchProductsFromDB(products) {
   // Consultas paralelas otimizadas
   const [resultsById, resultsByName] = await Promise.all([
     productIds.length > 0 
-      ? prisma.produtos.findMany({ where: { id: { in: productIds } }})
+      ? prisma.produtos.findMany({ 
+          where: { id: { in: productIds } },
+          select: { id: true, nome: true, preco: true, descricao: true } 
+        })
       : Promise.resolve([]),
     
     searchProductsByName(productNames)
@@ -255,14 +267,18 @@ async function fetchProductsFromDB(products) {
 
 // Função auxiliar para buscar produtos por nome (case-insensitive)
 async function searchProductsByName(names) {
-  // Solução compatível com a maioria dos bancos de dados
-  // Alternativa 1: Usar consulta raw SQL para case-insensitive se necessário
+  if (names.length === 0) return [];
+
   return prisma.produtos.findMany({
     where: {
       OR: names.map(name => ({
-        nome: { contains: name }
+        nome: { 
+          contains: name,
+          mode: 'insensitive'
+        }
       }))
-    }
+    },
+    select: { id: true, nome: true, preco: true, descricao: true }
   });
 }
 
