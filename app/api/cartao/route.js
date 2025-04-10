@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import mercadopago from "mercadopago";
+import { headers } from "next/headers";
 
 const MERCADO_PAGO_TOKEN = process.env.MP_ACCESS_TOKEN;
 
@@ -11,6 +12,22 @@ mercadopago.configurations = {
   access_token: MERCADO_PAGO_TOKEN
 };
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
 
 export async function POST(req) {
   try {
@@ -18,13 +35,13 @@ export async function POST(req) {
 
     // Validações básicas
     if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
-      return NextResponse.json({ error: "Valor da transação (amount) inválido" }, { status: 400 });
+      return NextResponse.json({ error: "Valor da transação (amount) inválido" }, { status: 400, headers: corsHeaders });
     }
     if (!body.email || typeof body.email !== "string" || !body.email.includes("@")) {
-      return NextResponse.json({ error: "E-mail do pagador inválido" }, { status: 400 });
+      return NextResponse.json({ error: "E-mail do pagador inválido" }, { status: 400, headers: corsHeaders });
     }
     if (!body.card_number || !body.expiration_month || !body.expiration_year || !body.security_code || !body.cardholder_name) {
-      return NextResponse.json({ error: "Dados do cartão incompletos" }, { status: 400 });
+      return NextResponse.json({ error: "Dados do cartão incompletos" }, { status: 400, headers: corsHeaders });
     }
 
     // Gerar token do cartão
@@ -48,13 +65,13 @@ export async function POST(req) {
     const tokenData = await tokenResponse.json();
 
     if (!tokenData.id) {
-      return NextResponse.json({ error: "Falha ao gerar token do cartão", details: tokenData }, { status: 400 });
+      return NextResponse.json({ error: "Falha ao gerar token do cartão", details: tokenData }, { status: 400, headers: corsHeaders });
     }
 
     const cardToken = tokenData.id;
 
     if (!cardToken) {
-      return NextResponse.json({ error: "Falha ao gerar token do cartão" }, { status: 400 });
+      return NextResponse.json({ error: "Falha ao gerar token do cartão" }, { status: 400, headers: corsHeaders });
     }
 
     // Criar pagamento
@@ -70,7 +87,6 @@ export async function POST(req) {
         token: cardToken,
         description: "Pagamento via Cartão",
         installments: body.installments || 1,
-        payment_method_id: body.payment_method_id,
         issuer_id: body.issuer_id || null,
         payer: {
           email: body.email,
@@ -81,13 +97,16 @@ export async function POST(req) {
 
     if (!paymentResponse.ok) {
       console.error("Erro do Mercado Pago:", await paymentResponse.text());
-      return NextResponse.json({ error: "Erro ao processar pagamento" }, { status: paymentResponse.status });
+      return NextResponse.json({ error: "Erro ao processar pagamento" }, { status: 400, headers: corsHeaders });
     }
 
     const paymentData = await paymentResponse.json();
-    return NextResponse.json(paymentData);
+    return NextResponse.json(paymentData, {
+      status: 200,
+      headers: corsHeaders,
+    });    
   } catch (error) {
     console.error("Erro ao processar pagamento:", error);
-    return NextResponse.json({ error: "Erro inesperado ao processar pagamento" }, { status: 500 });
+    return NextResponse.json({ error: "Erro inesperado ao processar pagamento" }, { status: 400, headers: corsHeaders });
   }
 }
