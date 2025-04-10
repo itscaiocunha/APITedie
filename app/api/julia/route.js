@@ -14,7 +14,7 @@ const CONFIG = {
     BASE_URL: 'https://api.zaia.app/v1.1/api',
     AGENT_ID: 43186,
     TIMEOUTS: {
-      CHAT: 8000,    // 8 segundos
+      CHAT: 20000,    // 20 segundos
       MESSAGE: 15000 // 15 segundos
     }
   },
@@ -27,7 +27,7 @@ function createHttpResponse(status, data = {}, headers = {}) {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': CONFIG.CORS.ALLOWED_ORIGINS.join(','),
+      'Access-Control-Allow-Origin': CONFIG.CORS.ALLOWED_ORIGINS,
       'Access-Control-Allow-Methods': CONFIG.CORS.ALLOWED_METHODS,
       'Access-Control-Allow-Headers': CONFIG.CORS.ALLOWED_HEADERS,
       ...headers
@@ -37,8 +37,13 @@ function createHttpResponse(status, data = {}, headers = {}) {
 
 // Handler para requisições OPTIONS (CORS Preflight)
 export async function OPTIONS() {
-  return createHttpResponse(204, {}, {
-    'Content-Length': '0'
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
   });
 }
 
