@@ -22,7 +22,8 @@
     "node-fetch": "^3.3.2",
     "prisma": "^6.2.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "postcss": "^8",
