@@ -2,34 +2,52 @@ import { NextResponse } from "next/server";
 
 const MERCADO_PAGO_TOKEN = process.env.MP_ACCESS_TOKEN;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://www.tedie.com.br",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
 
     if (!MERCADO_PAGO_TOKEN) {
       console.error("Erro: Token do Mercado Pago não configurado.");
-      return NextResponse.json(
-        { error: "Erro interno: Token não configurado" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro interno: Token não configurado" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
-      return NextResponse.json(
-        { error: "Valor da transação (amount) inválido" },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Valor da transação (amount) inválido" }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    if (
-      !body.email ||
-      typeof body.email !== "string" ||
-      !body.email.includes("@")
-    ) {
-      return NextResponse.json(
-        { error: "E-mail do pagador inválido" },
-        { status: 400 }
-      );
+    if (!body.email || typeof body.email !== "string" || !body.email.includes("@")) {
+      return new Response(JSON.stringify({ error: "E-mail do pagador inválido" }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -46,34 +64,49 @@ export async function POST(req) {
       }),
     });
 
-    if (!response.ok) {
-      console.error("Erro do Mercado Pago:", await response.text());
-      return NextResponse.json(
-        { error: "Erro ao processar pagamento com o Mercado Pago" },
-        { status: response.status }
-      );
-    }
+    const text = await response.text();
 
-    const text = await response.text(); // Obtém a resposta como texto
+    if (!response.ok) {
+      console.error("Erro do Mercado Pago:", text);
+      return new Response(JSON.stringify({ error: "Erro ao processar pagamento com o Mercado Pago" }), {
+        status: response.status,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
+    }
 
     let data;
     try {
-      data = JSON.parse(text); // Tenta converter para JSON
+      data = JSON.parse(text);
     } catch (error) {
       console.error("Erro ao converter resposta para JSON:", error);
-      return NextResponse.json(
-        { error: "Erro ao processar resposta do Mercado Pago" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro ao processar resposta do Mercado Pago" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    return NextResponse.json(data);
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   } catch (error) {
     console.error("Erro ao gerar PIX:", error);
-    return NextResponse.json(
-      { error: "Erro inesperado ao processar pagamento" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Erro inesperado ao processar pagamento" }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   }
 }
 
@@ -84,58 +117,79 @@ export async function GET(req) {
 
     if (!MERCADO_PAGO_TOKEN) {
       console.error("Erro: Token do Mercado Pago não configurado.");
-      return NextResponse.json(
-        { error: "Erro interno: Token não configurado" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro interno: Token não configurado" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     if (!idPagamento || isNaN(idPagamento) || idPagamento < 0) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+      return new Response(JSON.stringify({ error: "ID inválido" }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    const response = await fetch(
-      `https://api.mercadopago.com/v1/payments/${idPagamento}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${MERCADO_PAGO_TOKEN}`,
-        },
-      }
-    );
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${idPagamento}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${MERCADO_PAGO_TOKEN}`,
+      },
+    });
+
+    const text = await response.text();
 
     if (!response.ok) {
-      console.error("Erro do Mercado Pago:", await response.text());
-      return NextResponse.json(
-        { error: "Erro ao verificar pagamento com o Mercado Pago" },
-        { status: response.status }
-      );
+      console.error("Erro do Mercado Pago:", text);
+      return new Response(JSON.stringify({ error: "Erro ao verificar pagamento com o Mercado Pago" }), {
+        status: response.status,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
-
-    const text = await response.text(); // Obtém a resposta como texto
 
     let data;
     try {
-      data = JSON.parse(text); // Tenta converter para JSON
+      data = JSON.parse(text);
     } catch (error) {
       console.error("Erro ao converter resposta para JSON:", error);
-      return NextResponse.json(
-        { error: "Erro ao processar resposta do Mercado Pago" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro ao processar resposta do Mercado Pago" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       status_pagamento: data.status,
       status_detail: data.status_detail,
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     });
   } catch (error) {
     console.error("Erro no status:", error);
-    return NextResponse.json(
-      { error: "Erro inesperado ao verificar status do pagamento." },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Erro inesperado ao verificar status do pagamento." }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   }
 }
 
@@ -145,67 +199,87 @@ export async function PUT(req) {
 
     if (!MERCADO_PAGO_TOKEN) {
       console.error("Erro: Token do Mercado Pago não configurado.");
-      return NextResponse.json(
-        { error: "Erro interno: Token não configurado" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro interno: Token não configurado" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     if (!body.status) {
-      return NextResponse.json(
-        { error: "Status da transação inválido" },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Status da transação inválido" }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     if (!body.idPagamento || isNaN(body.idPagamento) || body.idPagamento < 0) {
-      return NextResponse.json(
-        { error: "Status da transação inválido" },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "ID da transação inválido" }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    const idPagamento = body.idPagamento;
-
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${idPagamento}`, {
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${body.idPagamento}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${MERCADO_PAGO_TOKEN}`,
         "X-Idempotency-Key": `${Date.now()}`,
       },
-      body: JSON.stringify({
-        status: body.status,
-      }),
+      body: JSON.stringify({ status: body.status }),
     });
 
-    if (!response.ok) {
-      console.error("Erro do Mercado Pago:", await response.text());
-      return NextResponse.json(
-        { error: "Erro ao cancelar código PIX com o Mercado Pago" },
-        { status: response.status }
-      );
-    }
+    const text = await response.text();
 
-    const text = await response.text(); // Obtém a resposta como texto
+    if (!response.ok) {
+      console.error("Erro do Mercado Pago:", text);
+      return new Response(JSON.stringify({ error: "Erro ao cancelar código PIX com o Mercado Pago" }), {
+        status: response.status,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
+    }
 
     let data;
     try {
-      data = JSON.parse(text); // Tenta converter para JSON
+      data = JSON.parse(text);
     } catch (error) {
       console.error("Erro ao converter resposta para JSON:", error);
-      return NextResponse.json(
-        { error: "Erro ao processar resposta do Mercado Pago" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "Erro ao processar resposta do Mercado Pago" }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
-    return NextResponse.json({ paymentStatus: data.status });
+    return new Response(JSON.stringify({ paymentStatus: data.status }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   } catch (error) {
     console.error("Erro ao cancelar PIX:", error);
-    return NextResponse.json(
-      { error: "Erro inesperado ao processar pagamento" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Erro inesperado ao processar pagamento" }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   }
 }
