@@ -24,16 +24,19 @@ export async function GET(request) {
   }
 
   try {
-    // Primeiro encontramos a data mais recente
+
     const dataMaisRecente = await prisma.carrinho.findFirst({
       where: { usuario_id: parseInt(usuario_id) },
       orderBy: { data_adicao: 'desc' },
       select: { data_adicao: true }
     });
 
+    console.log("Data mais recente:", dataMaisRecente.data_adicao);
+
     if (!dataMaisRecente) {
       return new NextResponse(JSON.stringify({
         success: true,
+        message: "Data não encontrada.",
         itens: [],
       }), { 
         status: 200,
@@ -41,11 +44,23 @@ export async function GET(request) {
       });
     }
 
+    // Truncar a data para o mesmo segundo
+    const dataMaisRecenteSemMs = new Date(Math.floor(dataMaisRecente.data_adicao.getTime() / 1000) * 1000);
+
+    console.log("Data mais recente sem ms:", dataMaisRecenteSemMs);
+
+    // Definir intervalo de 1 segundo
+    const inicioDoSegundo = new Date(dataMaisRecenteSemMs.getTime());
+    const finalDoSegundo = new Date(dataMaisRecenteSemMs.getTime() + 999); // até .999 ms
+
     // Depois buscamos todos os itens com essa data
     const itensRecentes = await prisma.carrinho.findMany({
       where: { 
         usuario_id: parseInt(usuario_id),
-        data_adicao: dataMaisRecente.data_adicao
+        data_adicao: {
+          gte: inicioDoSegundo,
+          lte: finalDoSegundo
+        }
       },
       select: {
         id: true,
@@ -61,6 +76,17 @@ export async function GET(request) {
         data_adicao: 'desc'
       }
     });
+
+    if(!itensRecentes || itensRecentes.length === 0) {
+      return new NextResponse(JSON.stringify({
+        success: true,
+        message: "Nenhum produto encontrado.",
+        itens: [],
+      }), { 
+        status: 200,
+        headers: corsHeaders
+      });
+    }
 
     return new NextResponse(JSON.stringify({
       success: true,
@@ -110,7 +136,7 @@ export async function POST(request) {
             imagem: item.imagem,
           },
           select: {
-            id: true,
+            produto_id: true, //trocar aqui para produto_id depois
             nome: true,
             quantidade: true,
             preco: true,
