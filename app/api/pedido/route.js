@@ -56,7 +56,7 @@ export async function POST(request) {
         data_pedido: new Date(),
         itens_pedido: {
           create: itens.map((item) => ({
-            produto_id: item.id,
+            produto_id: item.produto_id,
             quantidade: item.quantidade,
             preco_unit: item.preco,
           })),
