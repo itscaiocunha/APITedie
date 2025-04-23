@@ -65,6 +65,13 @@ export async function POST(request) {
       include: { itens_pedido: true },
     });
 
+     // Aqui apagamos os itens do carrinho do usuário
+     await prisma.carrinho.deleteMany({
+      where: {
+        usuario_id: usuario_id,
+      },
+    });
+
     const executionTime = Date.now() - start;
     return new Response(JSON.stringify({ pedidoId: pedido.id, message: "Pedido criado com sucesso", executionTime }), {
       status: 201,
