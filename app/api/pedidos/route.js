@@ -36,14 +36,15 @@ export async function GET(request) {
               select: {
                 id: true,
                 nome: true,
-                preco: true  // Assuming there's a price field
+                preco: true ,
+                imagem: true // Assuming there's a price field
               }
             }
           }
         }
       },
       orderBy: {
-        data_pedido: 'desc'  // Most recent orders first
+        data_pedido: 'desc' 
       }
     });
 
@@ -62,7 +63,8 @@ export async function GET(request) {
         produto: {
           id: item.produtos.id,
           nome: item.produtos.nome,
-          preco: item.produtos.preco
+          preco: item.produtos.preco,
+          imagem: item.produtos.imagem
         }
       }))
     }));
