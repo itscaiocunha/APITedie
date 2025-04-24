@@ -124,33 +124,61 @@ export async function POST(request) {
       });
     }
 
-    const result = await prisma.$transaction(
-      itens.map(item => 
-        prisma.carrinho.create({
-          data: {
-            usuario_id,
-            produto_id: item.produto_id,
-            nome: item.nome,
-            quantidade: item.quantidade,
-            preco: item.preco,
-            imagem: item.imagem,
-          },
-          select: {
-            produto_id: true, //trocar aqui para produto_id depois
-            nome: true,
-            quantidade: true,
-            preco: true,
-            data_adicao: true
+    const result = await prisma.$transaction(async (prisma) => {
+      const createdItems = [];
+      
+      for (const item of itens) {
+        // Verificar se o item já existe no carrinho do usuário
+        const existingItem = await prisma.carrinho.findFirst({
+          where: {
+            usuario_id: usuario_id,
+            produto_id: item.produto_id
           }
-        })
-      )
-    );
+        });
+
+        // Se o item não existir, criar
+        if (!existingItem) {
+          const createdItem = await prisma.carrinho.create({
+            data: {
+              usuario_id,
+              produto_id: item.produto_id,
+              nome: item.nome,
+              quantidade: item.quantidade,
+              preco: item.preco,
+              imagem: item.imagem,
+            },
+            select: {
+              produto_id: true,
+              nome: true,
+              quantidade: true,
+              preco: true,
+              data_adicao: true
+            }
+          });
+          createdItems.push(createdItem);
+        }
+      }
+
+      return createdItems;
+    });
+
+    if (result.length === 0) {
+      return new NextResponse(JSON.stringify({
+        success: false,
+        error: "Todos os itens já existem no carrinho",
+        details: "Nenhum item foi adicionado porque todos os produtos já estão no carrinho do usuário"
+      }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
 
     return new NextResponse(JSON.stringify({
       success: true,
       itens: result,
       metadata: {
-        primeiro_item_adicionado_em: result[0]?.data_adicao || null
+        primeiro_item_adicionado_em: result[0]?.data_adicao || null,
+        total_itens_adicionados: result.length
       }
     }), { 
       status: 201,
