@@ -83,7 +83,7 @@ model produtos {
   preco        Float?
   Estoque      Int?
   categoria_id Int?
-  imagem       String?        @db.NVarChar(100)
+  imagem       String?        @db.NVarChar(Max)
   ean          String?        @db.NVarChar(Max)
   IdEmpresa    Int?
   refrigerado  Int?

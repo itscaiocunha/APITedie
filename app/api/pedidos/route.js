@@ -37,7 +37,7 @@ export async function GET(request) {
                 id: true,
                 nome: true,
                 preco: true ,
-                imagem: true // Assuming there's a price field
+                imagem: true
               }
             }
           }
